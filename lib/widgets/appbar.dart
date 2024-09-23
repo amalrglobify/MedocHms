@@ -14,11 +14,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
+      forceMaterialTransparency: true,
       title: SizedBox(
           width: MediaQuery.of(context).size.width * 0.5,
           height: 40,
           child: title
       ),
+      iconTheme: IconThemeData(color: Colors.black),
       leadingWidth: 25,
       actions: actions,
       bottom: bottom,

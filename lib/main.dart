@@ -1,5 +1,6 @@
-import 'package:demoforfiles/routes/app_router.dart';
-import 'package:demoforfiles/theme/themes.dart';
+import 'package:medochms/rest/hive_repo.dart';
+import 'package:medochms/routes/app_router.dart';
+import 'package:medochms/theme/themes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -7,7 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await HiveRepo.initialize('medocHMS');
   runApp(const ProviderScope(child: MyApp()));
 }
 

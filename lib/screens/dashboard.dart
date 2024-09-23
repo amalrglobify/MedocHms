@@ -1,6 +1,8 @@
 
 
 import 'package:auto_route/annotations.dart';
+import 'package:auto_route/auto_route.dart';
+import 'package:medochms/routes/app_router.gr.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
@@ -73,56 +75,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Flexible(
                     flex: 5,
-                    child: Container(
-                      padding: EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0XFF3C001F), Color(0XFFF5007F)],
-                          begin: Alignment.bottomLeft,
-                          end: Alignment.topRight, // Define the gradient end
-                        ),
-                        borderRadius: BorderRadius.circular(12), // Optional border radius
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("35", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
-                              Text("New IP", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
-                            ],
+                    child: GestureDetector(
+                      onTap: (){
+                        context.pushRoute(NewIpListingRoute());
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0XFF3C001F), Color(0XFFF5007F)],
+                            begin: Alignment.bottomLeft,
+                            end: Alignment.topRight,
                           ),
-                          Image.asset("assets/images/notificationimage.png", height: 35, color: Colors.white,fit: BoxFit.contain,)
-                        ],
+                          borderRadius: BorderRadius.circular(12), // Optional border radius
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("35", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                                Text("New IP", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
+                              ],
+                            ),
+                            Image.asset("assets/images/notificationimage.png", height: 35, color: Colors.white,fit: BoxFit.contain,)
+                          ],
+                        ),
                       ),
                     ),
                   ),
                   SizedBox(width: 15,),
                   Flexible(
                     flex: 5,
-                    child: Container(
-                      padding: EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0XFF333E9F), Color(0XFF77209F)],
-                          begin: Alignment.bottomLeft,
-                          end: Alignment.topRight, // Define the gradient end
-                        ),
-                        borderRadius: BorderRadius.circular(12), // Optional border radius
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("20", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
-                              Text("Revist", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
-                            ],
+                    child: GestureDetector(
+                      onTap: (){
+                        context.pushRoute(RevisitListingRoute());
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0XFF333E9F), Color(0XFF77209F)],
+                            begin: Alignment.bottomLeft,
+                            end: Alignment.topRight, // Define the gradient end
                           ),
-                          Image.asset("assets/images/revisitlogo.png", height: 40, color: Colors.white,)
-                        ],
+                          borderRadius: BorderRadius.circular(12), // Optional border radius
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("20", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                                Text("Revist", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
+                              ],
+                            ),
+                            Image.asset("assets/images/revisitlogo.png", height: 40, color: Colors.white,)
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -134,56 +146,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Flexible(
                     flex: 5,
-                    child: Container(
-                      padding: EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0XFF040205), Color(0XFF4E3167)],
-                          begin: Alignment.bottomLeft,
-                          end: Alignment.topRight, // Define the gradient end
-                        ),
-                        borderRadius: BorderRadius.circular(12), // Optional border radius
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("35", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
-                              Text("Registrations", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
-                            ],
+                    child: GestureDetector(
+                      onTap: (){
+                        context.pushRoute(RegistrationListRoute());
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0XFF040205), Color(0XFF4E3167)],
+                            begin: Alignment.bottomLeft,
+                            end: Alignment.topRight, // Define the gradient end
                           ),
-                          Image.asset("assets/images/registrationlogo.png", height: 35, color: Colors.white,)
-                        ],
+                          borderRadius: BorderRadius.circular(12), // Optional border radius
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("35", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                                Text("Registrations", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
+                              ],
+                            ),
+                            Image.asset("assets/images/registrationlogo.png", height: 35, color: Colors.white,)
+                          ],
+                        ),
                       ),
                     ),
                   ),
                   SizedBox(width: 15,),
                   Flexible(
                     flex: 5,
-                    child: Container(
-                      padding: EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0XFFD72628), Color(0XFF505296)],
-                          begin: Alignment.bottomLeft,
-                          end: Alignment.topRight, // Define the gradient end
-                        ),
-                        borderRadius: BorderRadius.circular(12), // Optional border radius
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("20", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
-                              Text("Total Admit", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
-                            ],
+                    child: GestureDetector(
+                      onTap: (){
+                        context.pushRoute(TotalAdmitListingRoute());
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0XFFD72628), Color(0XFF505296)],
+                            begin: Alignment.bottomLeft,
+                            end: Alignment.topRight, // Define the gradient end
                           ),
-                          Image.asset("assets/images/admittedicon.png", height: 40, color: Colors.white,)
-                        ],
+                          borderRadius: BorderRadius.circular(12), // Optional border radius
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("20", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                                Text("Total Admit", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
+                              ],
+                            ),
+                            Image.asset("assets/images/admittedicon.png", height: 40, color: Colors.white,)
+                          ],
+                        ),
                       ),
                     ),
                   ),

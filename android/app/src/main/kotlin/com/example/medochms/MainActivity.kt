@@ -1,4 +1,4 @@
-package com.example.demoforfiles
+package com.example.medochms
 
 import io.flutter.embedding.android.FlutterActivity
 
