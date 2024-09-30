@@ -224,6 +224,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       );
       if(userDetails.oList!.isNotEmpty){
         HiveRepo.instance.user = userDetails;
+        HiveRepo.instance.setDepartmentId(value: departmentId.toString());
         userNameStored = "";
         passwordStored = "";
         context.pushRoute(DashboardRoute());

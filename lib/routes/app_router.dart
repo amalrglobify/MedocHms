@@ -24,5 +24,6 @@ class AppRouter extends $AppRouter {
     AutoRoute(page: TotalAdmitListingRoute.page),
     AutoRoute(page: ProcedureBillReportRoute.page),
     AutoRoute(page: RegistrationReportRoute.page),
+    AutoRoute(page: RevisitReportRoute.page),
   ];
 }

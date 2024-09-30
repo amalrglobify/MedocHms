@@ -2,12 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:hive/hive.dart';
+import 'package:medochms/models/departments/departments_model.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/user/user_login_model.dart';
 
 const String _baseUrl = 'baseURL';
 const String _user = 'user';
+const String _departmentId = 'departmentId';
 const String _authToken = 'authToken';
 const String _refreshToken = 'refreshToken';
 const String _defaultLanguage = 'defaultLanguage';
@@ -39,10 +41,19 @@ class HiveRepo {
     setBaseUrlValue(baseUrl);
   }
 
+  setDepartmentId({String? value}) {
+    setDepartmentIdValue(value);
+  }
+
+  Future<void> setDepartmentIdValue(String? value) async =>
+      _box.put(_departmentId, value);
+
   Future<void> setBaseUrlValue(String? value) async =>
       _box.put(_baseUrl, value);
 
   String? getBaseUrl() => _box.get(_baseUrl) as String?;
+
+  String? getDepartmentId() => _box.get(_departmentId) as String?;
 
   setTokens({String? accessToken, String? refreshToken}) {
     setAccessToken(accessToken);
@@ -59,6 +70,7 @@ class HiveRepo {
   String? getRefreshToken() => _box.get(_refreshToken) as String?;
 
   set user(UserLoginModel? user) => _box.put(_user, jsonEncode(user));
+
 
   UserLoginModel? get user {
     try {

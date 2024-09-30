@@ -1,23 +1,13 @@
 import 'dart:async';
-import 'dart:io';
-
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:medochms/routes/app_router.gr.dart';
-import 'package:medochms/widgets/login_button.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'dart:convert';
-import 'package:path_provider/path_provider.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/widgets.dart' as pdfWidgets;
-import 'package:printing/printing.dart';
-
-import '../../widgets/appbar.dart';
-import '../../widgets/drawer.dart'; // For encoding
 
 @RoutePage()
 class RegistrationReportScreen extends StatefulWidget {
@@ -316,7 +306,7 @@ class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
         title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            "Lab Bill Report",
+            "Registration Report",
             style: GoogleFonts.poppins(
               color: Colors.black,
               fontWeight: FontWeight.w500,
@@ -354,33 +344,7 @@ class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
                 ),
                 PopupMenuItem<String>(
                   onTap: () async {
-                    final pdf = pw.Document();
-                    pdf.addPage(
-                      pw.Page(
-                        build: (pw.Context context) {
-                          return pw.Center(
-                            child: pw.Text(
-                              _html,
-                              style: pw.TextStyle(fontSize: 24),
-                            ),
-                          );
-                        },
-                      ),
-                    );
 
-                    try {
-                      final pdfFile = await savePdfToFile(pdf);
-                      final filePath = pdfFile.path;
-                      print('PDF saved to: $filePath');
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('PDF saved to $filePath')),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error saving PDF: $e')),
-                      );
-                    }
                   },
                   value: 'download',
                   child: ListTile(
@@ -503,17 +467,5 @@ class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
         controller: _con,
       ),
     );
-  }
-
-
-  Future<File> savePdfToFile(pw.Document pdf) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final filePath = '${directory.path}/pdf_output.pdf';
-    final pdfFile = File(filePath);
-
-    final bytes = await pdf.save();
-    await pdfFile.writeAsBytes(bytes);
-
-    return pdfFile;
   }
 }

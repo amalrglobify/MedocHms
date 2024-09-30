@@ -20,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen>  with TickerProviderStateMi
   @override
   void initState() {
     super.initState();
-    HiveRepo.instance.setBaseUrl(baseUrl: "http://49.50.79.12:67/");
+    HiveRepo.instance.setBaseUrl(baseUrl: "http://49.50.79.12:74/");
     Timer(const Duration(seconds: 2), () {
       if(HiveRepo.instance.user == null){
         context.router.replace(SignInRoute(departmentValue: "", departmentId: ""));

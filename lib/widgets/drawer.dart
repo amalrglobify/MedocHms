@@ -118,14 +118,14 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 leading: Icon(Icons.library_books, color: Color(0XFF3C001F)),
                 title: Text('Registration Report', style: GoogleFonts.poppins(),),
                 onTap: () {
-                  Navigator.pushNamed(context, '/settings/security');
+                  context.pushRoute(RegistrationReportRoute());
                 },
               ),
               ListTile(
                 leading: Icon(Icons.library_books, color: Color(0XFF3C001F)),
                 title: Text('Revist Report', style: GoogleFonts.poppins(),),
                 onTap: () {
-                  Navigator.pushNamed(context, '/settings/security');
+                  context.pushRoute(RevisitReportRoute());
                 },
               ),
             ],

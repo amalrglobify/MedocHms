@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:medochms/routes/app_router.gr.dart';
@@ -11,14 +10,14 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'dart:convert';
 
 @RoutePage()
-class LabBillReportScreen extends StatefulWidget {
-  const LabBillReportScreen({super.key});
+class RevisitReportScreen extends StatefulWidget {
+  const RevisitReportScreen({super.key});
 
   @override
-  State<LabBillReportScreen> createState() => _LabBillReportScreenState();
+  State<RevisitReportScreen> createState() => _RevisitReportScreenState();
 }
 
-class _LabBillReportScreenState extends State<LabBillReportScreen> {
+class _RevisitReportScreenState extends State<RevisitReportScreen> {
   final Completer<WebViewController> _controller =
   Completer<WebViewController>();
   WebViewController _con = WebViewController();
@@ -130,7 +129,7 @@ class _LabBillReportScreenState extends State<LabBillReportScreen> {
             <p>123 Health Street, Wellness City, HC 12345</p>
     </div>
 
-    <h1>Lab Bill Report</h1>
+    <h1>Revisit Report</h1>
 
     <div class="content">
         <table>
@@ -149,74 +148,80 @@ class _LabBillReportScreenState extends State<LabBillReportScreen> {
             <thead>
                 <tr>
                     <th>Sl#</th>
-                    <th>BNo#</th>
                     <th>Reg#</th>
-                    <th>IP#</th>
                     <th>Date</th>
                     <th>Time</th>
                     <th>Patient</th>
                     <th>Doctor</th>
-                    <th>Cash</th>
-                    <th>Upi</th>
-                    <th>Card</th>
+                    <th>Age</th>
+                    <th>Gender</th>
+                    <th>Address</th>
+                    <th>Phone\nNumber</th>
+                    <th>Revisit\nFee</th>
+                    <th>Consult\nFee</th>
+                    <th>Other\nFee</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>1</td>
                     <td>4578</td>
-                    <td>100</td>
-                    <td>500</td>
                     <td>2024/09/15</td>
                     <td>12:00 PM</td>
                     <td>Amal</td>
                     <td>Doctor</td>
-                    <td>100</td>
-                    <td>0.0</td>
-                    <td>0.0</td>
+                    <td>35</td>
+                    <td>Male</td>
+                    <td>Technopark Phase 1, Kazhakkottam, Trivandrum</td>
+                    <td>1234567890</td>
+                    <td>7890</td>
+                    <td>7890</td>
+                    <td>90</td>
                 </tr>
                 <tr>
-                    <td>2</td>
-                    <td>1457</td>
-                    <td>150</td>
-                    <td>150</td>
+                    <td>1</td>
+                    <td>4578</td>
                     <td>2024/09/15</td>
                     <td>12:00 PM</td>
                     <td>Amal</td>
                     <td>Doctor</td>
-                    <td>100</td>
-                    <td>0.0</td>
-                    <td>0.0</td>
+                    <td>35</td>
+                    <td>Male</td>
+                    <td>Technopark Phase 1, Kazhakkottam, Trivandrum</td>
+                    <td>1234567890</td>
+                    <td>7890</td>
+                    <td>7890</td>
+                    <td>90</td>
                 </tr>
                 <tr>
-                    <td>3</td>
-                    <td>3458</td>
-                    <td>50</td>
-                    <td>150</td>
+                    <td>1</td>
+                    <td>4578</td>
                     <td>2024/09/15</td>
                     <td>12:00 PM</td>
                     <td>Amal</td>
                     <td>Doctor</td>
-                    <td>100</td>
-                    <td>0.0</td>
-                    <td>0.0</td>
+                    <td>35</td>
+                    <td>Male</td>
+                    <td>Technopark Phase 1, Kazhakkottam, Trivandrum</td>
+                    <td>1234567890</td>
+                    <td>7890</td>
+                    <td>7890</td>
+                    <td>90</td>
                 </tr>
                 <tr>
-                    <td>4</td>
-                    <td>1278</td>
-                    <td>80</td>
-                    <td>80</td>
+                    <td>1</td>
+                    <td>4578</td>
                     <td>2024/09/15</td>
                     <td>12:00 PM</td>
                     <td>Amal</td>
                     <td>Doctor</td>
-                    <td>100</td>
-                    <td>0.0</td>
-                    <td>0.0</td>
-                </tr>
-                <tr class="total">
-                    <td colspan="4">Total Amount</td>
-                    <td>880</td>
+                    <td>35</td>
+                    <td>Male</td>
+                    <td>Technopark Phase 1, Kazhakkottam, Trivandrum</td>
+                    <td>1234567890</td>
+                    <td>7890</td>
+                    <td>7890</td>
+                    <td>90</td>
                 </tr>
             </tbody>
         </table>
@@ -316,7 +321,7 @@ class _LabBillReportScreenState extends State<LabBillReportScreen> {
         title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            "Lab Bill Report",
+            "Revisit Report",
             style: GoogleFonts.poppins(
               color: Colors.black,
               fontWeight: FontWeight.w500,
@@ -431,42 +436,42 @@ class _LabBillReportScreenState extends State<LabBillReportScreen> {
                 ),
                 SizedBox(width: 8.0),
                 Expanded(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Text("", style: GoogleFonts.poppins(color: Colors.grey),),
-                      ),
-                      GestureDetector(
-                        onTap: (){
-                          context.pushRoute(LabBillReportRoute());
-                        },
-                        child: Container(
-                          height: MediaQuery.of(context).size.height * 0.05,
-                          width: double.maxFinite,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0XFF333E9F), Color(0XFF77209F)],
-                              begin: Alignment.bottomLeft,
-                              end: Alignment.topRight, // Define the gradient end
-                            ),
-                            borderRadius: BorderRadius.circular(10), // Optional border radius
-                          ),
-                          // color: Color(0XFF1875D3),
-                          child: Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Iconsax.search_normal, color: Colors.white,),
-                                  SizedBox(width: 8),
-                                  Text("Search", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500),),
-                                ],
-                              )
-                          ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Text("", style: GoogleFonts.poppins(color: Colors.grey),),
                         ),
-                      )
-                    ],
-                  )
+                        GestureDetector(
+                          onTap: (){
+                            context.pushRoute(LabBillReportRoute());
+                          },
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.05,
+                            width: double.maxFinite,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0XFF333E9F), Color(0XFF77209F)],
+                                begin: Alignment.bottomLeft,
+                                end: Alignment.topRight, // Define the gradient end
+                              ),
+                              borderRadius: BorderRadius.circular(10), // Optional border radius
+                            ),
+                            // color: Color(0XFF1875D3),
+                            child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Iconsax.search_normal, color: Colors.white,),
+                                    SizedBox(width: 8),
+                                    Text("Search", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500),),
+                                  ],
+                                )
+                            ),
+                          ),
+                        )
+                      ],
+                    )
                 ),
               ],
             ),

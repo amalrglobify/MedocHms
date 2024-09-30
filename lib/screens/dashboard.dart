@@ -2,42 +2,110 @@
 
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:medochms/Provider/dashboard/dashboard_provider.dart';
+import 'package:medochms/Provider/doctors/doctors_provider.dart';
+import 'package:medochms/Provider/revisit/revisit_Provider.dart';
+import 'package:medochms/models/revisit/revisit_graph_model.dart';
 import 'package:medochms/routes/app_router.gr.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
+import '../models/dashboard/dashboard_details_model.dart';
+import '../models/doctors/doctors_available.dart';
 import '../theme/colors.dart';
 import '../widgets/appbar.dart';
 import '../widgets/drawer.dart';
 import '../widgets/pi_chart.dart';
 
 @RoutePage()
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+extension DateComparison on DateTime {
+  bool isSameDate(DateTime other) {
+    return year == other.year && month == other.month && day == other.day;
+  }
+}
 
-  late List<_ChartData> data;
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+
+  List<_ChartData> chartData = [];
   late TooltipBehavior _tooltip;
+  List<DashboardDetailsList> dashboardWidgetsList = [];
+  List<DoctorsAvailableList> doctorsAvailableList = [];
+  List<RevisitGraphDetailsList> revisitGraphDetailsList = [];
+  double highestRevisitValue = 10;
+  String revisitFirstDate = "";
+  String revisitLastDate = "";
 
   @override
   void initState() {
-    data = [
-      _ChartData('Sun', 12),
-      _ChartData('Mon', 15),
-      _ChartData('Tue', 30),
-      _ChartData('Wed', 60),
-      _ChartData('Thu', 10),
-      _ChartData('Fri', 80),
-      _ChartData('Sat', 55)
-    ];
     _tooltip = TooltipBehavior(enable: true);
+    getDashboardDetails();
+    getAvailableDoctorsList();
+    getRevisitGraphDetails();
     super.initState();
+  }
+
+  Future<void> getDashboardDetails() async {
+    dashboardWidgetsList = await ref.read(dashboardProvider).getDashboardDetails();
+    setState(() {});
+  }
+
+  Future<void> getAvailableDoctorsList() async {
+    doctorsAvailableList = await ref.read(doctorsProvider).getAvailableDoctors();
+    setState(() {});
+  }
+
+  Future<void> getRevisitGraphDetails() async {
+    revisitGraphDetailsList = await ref.read(revisitListProvider).getRevisitGraphDetails();
+
+    DateTime now = DateTime.now();
+
+    List<DateTime> last7Days = List.generate(7, (index) => now.subtract(Duration(days: index)));
+    revisitFirstDate = DateFormat('dd/MM/yyyy').format(last7Days.last);
+    revisitLastDate = DateFormat('dd/MM/yyyy').format(last7Days.first);
+
+    Map<String, int> visitCounts = {
+      'Sun': 0,
+      'Mon': 0,
+      'Tue': 0,
+      'Wed': 0,
+      'Thu': 0,
+      'Fri': 0,
+      'Sat': 0,
+    };
+
+    for (var item in revisitGraphDetailsList) {
+      String toDay = item.toDay.toString();
+      DateTime date = DateFormat('dd/MM/yyyy').parse(toDay);
+
+      if (last7Days.any((d) => d.isSameDate(date))) {
+        String dayOfWeek = DateFormat('EEE').format(date);
+
+
+        int visitValue = int.tryParse(item.visit.toString()) ?? 0;
+        visitCounts[dayOfWeek] = visitValue;
+      }
+    }
+
+    chartData = last7Days.map((date) {
+      String dayOfWeek = DateFormat('EEE').format(date);
+      print("dayOfWeekdayOfWeekdayOfWeekdayOfWeekdayOfWeekdayOfWeekdayOfWeekdayOfWeek$dayOfWeek");
+      return _ChartData(dayOfWeek, visitCounts[dayOfWeek]!);
+    }).toList();
+
+    highestRevisitValue = double.parse(visitCounts.values.reduce((a, b) => a > b ? a : b).toString());
+    chartData = chartData.reversed.toList();
+
+    setState(() {});
   }
 
   List<Sector> sectors = [
@@ -57,7 +125,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 15.0),
             child: CircleAvatar(
-              backgroundColor: Color(0XFFF3007E),
+              backgroundColor: const Color(0XFFF3007E),
                 child: Text("A", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),)
             ),
           )
@@ -95,7 +163,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("35", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                                Text(dashboardWidgetsList.isNotEmpty ? dashboardWidgetsList[0].newIP.toString() : "", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
                                 Text("New IP", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
                               ],
                             ),
@@ -128,7 +196,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("20", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                                Text(dashboardWidgetsList.isNotEmpty ? dashboardWidgetsList[0].totalRevisit.toString() : "", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
                                 Text("Revist", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
                               ],
                             ),
@@ -166,7 +234,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("35", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                                Text(dashboardWidgetsList.isNotEmpty ? dashboardWidgetsList[0].totalPatients.toString() : "", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
                                 Text("Registrations", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
                               ],
                             ),
@@ -199,7 +267,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("20", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                                Text(dashboardWidgetsList.isNotEmpty ? dashboardWidgetsList[0].admitted.toString() : "", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
                                 Text("Total Admit", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
                               ],
                             ),
@@ -212,16 +280,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
               SizedBox(height: 20,),
-              Text("Revist Graph", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+              RichText(
+                text: TextSpan(
+                  style: GoogleFonts.poppins(
+                    fontSize: 18, // Default font size for the main text
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                    color: Colors.black, // Set a default text color
+                  ),
+                  children: <TextSpan>[
+                    const TextSpan(text: 'Revisit Graph (', style: TextStyle(fontWeight: FontWeight.w600)),
+                    TextSpan(
+                      text: '$revisitFirstDate - $revisitLastDate',
+                      style: TextStyle(fontSize: 14), // Decreased font size for the dates
+                    ),
+                    TextSpan(text: ')', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
               SizedBox(height: 10,),
               Container(
                 child: SfCartesianChart(
                     primaryXAxis: CategoryAxis(),
-                    primaryYAxis: NumericAxis(minimum: 0, maximum: 100, interval: 20),
+                    primaryYAxis: NumericAxis(minimum: 0, maximum: highestRevisitValue + 1, interval: highestRevisitValue/2),
                     tooltipBehavior: _tooltip,
                     series: <CartesianSeries<_ChartData, String>>[
                       ColumnSeries<_ChartData, String>(
-                          dataSource: data,
+                          dataSource: chartData,
                           xValueMapper: (_ChartData data, _) => data.x,
                           yValueMapper: (_ChartData data, _) => data.y,
                           name: 'patients',
@@ -232,9 +317,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               SizedBox(height: 20,),
               Text("Available Doctors", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
               SizedBox(height: 10,),
-              Container(
+              if(doctorsAvailableList.isNotEmpty)Container(
                 child: ListView.builder(
-                  itemCount: 5,
+                  itemCount: doctorsAvailableList.length,
                   shrinkWrap: true,
                   physics: NeverScrollableScrollPhysics(),
                   itemBuilder: (BuildContext context, index){
@@ -256,29 +341,229 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text("Dr. Ramchand S", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w400, fontSize: 15),),
-                                    Text("CARDIOLOGY", style: GoogleFonts.poppins(color: Colors.grey, fontWeight: FontWeight.w400, fontSize: 13),),
+                                    Text(doctorsAvailableList[index].name.toString(), style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w400, fontSize: 15),),
+                                    Text(doctorsAvailableList[index].department.toString(), style: GoogleFonts.poppins(color: Colors.grey, fontWeight: FontWeight.w400, fontSize: 13),),
                                   ],
                                 ),
                               ],
                             ),
-                            Container(
-                              height: MediaQuery.of(context).size.height * 0.04,
-                              width: MediaQuery.of(context).size.width * 0.22,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(15),
-                                border: Border.all(
-                                  color: Color(0XFF1875D3),
-                                  width: 1,
+                            GestureDetector(
+                              onTap : (){
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text('Shift Details'),
+                                      content: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Container(
+                                          height: MediaQuery.of(context).size.height * 0.37,
+                                          width: MediaQuery.of(context).size.width * 0.8,
+                                          child: Column(
+                                            children: [
+                                              Text('Dr. Ramchand S'),
+                                              Table(
+                                                border: TableBorder.all(),
+                                                children: [
+                                                  TableRow(
+                                                    decoration: BoxDecoration(color: Colors.grey[300]),
+                                                    children: [
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Days", style: TextStyle(fontWeight: FontWeight.bold)),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Shift", style: TextStyle(fontWeight: FontWeight.bold)),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Start Time", style: TextStyle(fontWeight: FontWeight.bold)),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("End Time", style: TextStyle(fontWeight: FontWeight.bold)),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  TableRow(
+                                                    children: [
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Sunday"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Evening"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("5:00 PM"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("11:00 PM"),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  TableRow(
+                                                    children: [
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Monday"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Morning"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("9:00 AM"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("5:00 PM"),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  TableRow(
+                                                    children: [
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Tuesday"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Afternoon"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("1:00 PM"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("9:00 PM"),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  TableRow(
+                                                    children: [
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Wed"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Evening"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("5:00 PM"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("11:00 PM"),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  TableRow(
+                                                    children: [
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Thursay"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Evening"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("5:00 PM"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("11:00 PM"),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  TableRow(
+                                                    children: [
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Friday"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Evening"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("5:00 PM"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("11:00 PM"),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  TableRow(
+                                                    children: [
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Saturday"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("Evening"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("5:00 PM"),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: Text("11:00 PM"),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          child: Text('OK'),
+                                          onPressed: () {
+                                            // Perform some action
+                                            Navigator.of(context).pop();
+                                          },
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                              child: Container(
+                                height: MediaQuery.of(context).size.height * 0.04,
+                                width: MediaQuery.of(context).size.width * 0.22,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15),
+                                  border: Border.all(
+                                    color: Color(0XFF1875D3),
+                                    width: 1,
+                                  ),
                                 ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  "Available",
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.black,
-                                    fontSize: 13
+                                child: Center(
+                                  child: Text(
+                                    "Available",
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.black,
+                                      fontSize: 13
+                                    ),
                                   ),
                                 ),
                               ),
@@ -301,7 +586,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   tooltipBehavior: _tooltip,
                   series: <CartesianSeries<_ChartData, String>>[
                     LineSeries<_ChartData, String>(
-                      dataSource: data,
+                      dataSource: chartData,
                       xValueMapper: (_ChartData data, _) => data.x,
                       yValueMapper: (_ChartData data, _) => data.y,
                       name: 'patients',
@@ -326,7 +611,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 class _ChartData {
   _ChartData(this.x, this.y);
   final String x;
-  final double y;
+  final int y;
 }
 
 
