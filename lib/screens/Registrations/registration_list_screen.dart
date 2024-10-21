@@ -3,9 +3,8 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import '../../Provider/revisit/revisit_Provider.dart';
-import '../../models/revisit/revisit_list_model.dart';
+import 'package:medochms/Provider/registration/registration_provider.dart';
+import 'package:medochms/models/registration/registration_List_Model.dart';
 import '../../routes/app_router.gr.dart';
 
 
@@ -21,26 +20,25 @@ class _RegistrationListScreenState extends ConsumerState<RegistrationListScreen>
 
   var _search = TextEditingController();
 
-  Future<List<AllProducts>> _fetchProducts() async {
-    List<AllProducts> products = await ref.read(revisitListProvider).getAllRevisitEntriesList();
-    allProducts.clear();
-    showedProducts.clear();
-    allProducts.addAll(products);
-    showedProducts.addAll(products);
-    return products;
+ getRegistrationList() async {
+    List<RegistrationListModel> registrationList = await ref.read(registrationProvider).getAllRegistrationList();
+    allRegistrationList.clear();
+    showedRegistrationList.clear();
+    allRegistrationList.addAll(registrationList);
+    showedRegistrationList.addAll(registrationList);
+    setState(() {});
+    return registrationList;
   }
 
-
-  late Future<List<AllProducts>> _productsFuture;
-  List<AllProducts> allProducts = [];
-  List<AllProducts> showedProducts = [];
+  List<RegistrationListModel> allRegistrationList = [];
+  List<RegistrationListModel> showedRegistrationList = [];
 
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    _productsFuture = _fetchProducts();
+    getRegistrationList();
   }
 
   Future<bool> _onWillPop() async {
@@ -89,14 +87,14 @@ class _RegistrationListScreenState extends ConsumerState<RegistrationListScreen>
                   ),
                   onChanged: (v){
                     if(v.isNotEmpty){
-                      // setState(() {
-                      //   searchProductByName(v);
-                      // });
+                      setState(() {
+                        searchPatientsByName(v);
+                      });
                     }else{
-                      // setState(() {
-                      //   showedProducts.clear();
-                      //   showedProducts = allProducts;
-                      // });
+                      setState(() {
+                        showedRegistrationList.clear();
+                        showedRegistrationList = allRegistrationList;
+                      });
                     }
                   },
                 ),
@@ -104,32 +102,13 @@ class _RegistrationListScreenState extends ConsumerState<RegistrationListScreen>
               SizedBox(height: 10,),
               Flexible(
                   flex: 25,
-                  child: FutureBuilder<List<AllProducts>>(
-                    future: _productsFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        if (snapshot.hasError) {
-                          return Center(child: Text(snapshot.error.toString()));
-                        } else if (snapshot.hasData) {
-                          List<AllProducts>? products = snapshot.data;
-                          if (products == null || products.isEmpty) {
-                            return const Center(child: Text("No data available"));
-                          }
-                          return ListView.builder(
-                            itemCount: showedProducts.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              AllProducts product = showedProducts[index];
-                              return newRegistrationList(product, index, showedProducts.length);
-                            },
-                          );
-                        } else {
-                          return const Center(child: Text("No data available"));
-                        }
-                      } else {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                  child: (showedRegistrationList.isNotEmpty)?ListView.builder(
+                    itemCount: showedRegistrationList.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      RegistrationListModel registrationList = showedRegistrationList[index];
+                      return newRegistrationList(registrationList, index, showedRegistrationList.length);
                     },
-                  )
+                  ):const Center(child: CircularProgressIndicator())
               )
             ],
           ),
@@ -138,67 +117,144 @@ class _RegistrationListScreenState extends ConsumerState<RegistrationListScreen>
     );
   }
 
-  Widget newRegistrationList(AllProducts allProduct, int index, int lastIndex) {
+  Widget newRegistrationList(RegistrationListModel registrationList, int index, int lastIndex) {
     final GlobalKey widgetKey = GlobalKey();
     return Padding(
-      padding: EdgeInsets.only(bottom: index != lastIndex-1 ? 8.0 : 75.0),
+      padding: EdgeInsets.only(bottom: index != lastIndex-1 ? 8.0 : 10.0),
       child: Padding(
-          padding: const EdgeInsets.only(top: 10.0, bottom: 10.0, left: 5.0, right: 5.0),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.only(left: 5.0, right: 5.0),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8), // Optional border radius
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("Patient Name", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),),
-                          Text("Reg : WH - 3", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                        ],
-                      ),
-                      Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                              flex: 5,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("DOB : 19/09/1998", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                                  Text("Mobile No : 1234567890", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                                ],
-                              )),
-                          Flexible(
-                              flex: 5,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text("Gender : Female", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                                  Text("Date : 19/09/1998", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                                ],
-                              )),
-                        ],
-                      ),
-                      SizedBox(height: 3,),
-                      Text("Address : Technopark Road, Amstor Building 2nd floor, Kazhakoottam, Trivandrum", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                    ],
-                  ),
+          padding: const EdgeInsets.only(top: 0.0, bottom: 10.0, left: 0.0, right: 0.0),
+          child: Material(
+            elevation: 3,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.grey,
+                  width: 0.2,
                 ),
               ),
-            ],
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(registrationList.pName.toString(), style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),),
+                        Text("Reg : ${registrationList.regNo.toString()}", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
+                      ],
+                    ),
+                    Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                            flex: 5,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "DOB : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: registrationList.pDOB.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 4,),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "Mobile No : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: registrationList.mobileNo.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )),
+                        Flexible(
+                            flex: 5,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "Gender : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: registrationList.pGender.toString() == "1" ? "Male" : "Female",
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: 4,),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "Reg Date : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: registrationList.regDate.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )),
+                      ],
+                    ),
+                    const SizedBox(height: 4,),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: "Address : ",
+                            style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                          ),
+                          TextSpan(
+                            text: registrationList.address1.toString(),
+                            style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           )
       ),
     );
+  }
+
+  void searchPatientsByName(String searchName) {
+    showedRegistrationList = allRegistrationList.where(
+            (patients) => patients.pName!.toLowerCase().contains(searchName.toLowerCase())
+    ).toList();
   }
 
 }

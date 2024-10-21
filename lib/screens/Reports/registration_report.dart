@@ -1,28 +1,45 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:excel/excel.dart';
+import 'package:flutter_native_html_to_pdf/flutter_native_html_to_pdf.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:html/parser.dart';
 import 'package:medochms/routes/app_router.gr.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'dart:convert';
 
+import '../../Provider/registration/registration_provider.dart';
+import '../../models/registration/registration_report_model.dart';
+
 @RoutePage()
-class RegistrationReportScreen extends StatefulWidget {
-  const RegistrationReportScreen({super.key});
+class RegistrationReportScreen extends ConsumerStatefulWidget {
+  final String fromDate;
+  final String toDate;
+  const RegistrationReportScreen({super.key, required this.fromDate, required this.toDate });
 
   @override
-  State<RegistrationReportScreen> createState() => _RegistrationReportScreenState();
+  ConsumerState<RegistrationReportScreen> createState() => _RegistrationReportScreenState(this.fromDate, this.toDate);
 }
 
-class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
+class _RegistrationReportScreenState extends ConsumerState<RegistrationReportScreen> {
+  String? generatedPdfFilePath;
+  final _flutterNativeHtmlToPdfPlugin = FlutterNativeHtmlToPdf();
   final Completer<WebViewController> _controller =
   Completer<WebViewController>();
   WebViewController _con = WebViewController();
   String _html = "";
+  String fromDate;
+  String toDate;
 
+  _RegistrationReportScreenState(this.fromDate, this.toDate);
 
   setHTML(String email, String phone, String name) {
     _html = '''
@@ -47,7 +64,39 @@ class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
             padding: 20px;
             border-radius: 8px;
             background-color: #fff;
+            // overflow-x: auto;
         }
+         th, td {
+        border: 1px solid #ddd; /* Optional: adds borders to cells */
+        padding: 8px;
+        text-align: left;
+    }
+
+    /* Add styles for the address column */
+   /* Style for the phone number column */
+td:nth-child(7) { /* Assuming the phone number is the 7th column */
+    max-width: 100px; /* Set a max width */
+    overflow: visible; /* Allow overflow to be visible */
+    word-wrap: break-word; /* Allow wrapping of long numbers */
+    white-space: normal; /* Allow normal whitespace handling */
+}
+
+/* Style for the phone number column */
+td:nth-child(5) { /* Assuming the phone number is the 7th column */
+    max-width: 100px; /* Set a max width */
+    overflow: visible; /* Allow overflow to be visible */
+    word-wrap: break-word; /* Allow wrapping of long numbers */
+    white-space: normal; /* Allow normal whitespace handling */
+}
+
+/* Style for the address column */
+td:nth-child(9) { /* Assuming the address is the 9th column */
+    max-width: 210px; /* Set a max width */
+    overflow: visible; /* Allow overflow to be visible */
+    word-wrap: break-word; /* Allow wrapping of long addresses */
+    white-space: normal; /* Allow normal whitespace handling */
+    height: auto; /* Allow the height to adjust based on content */
+}
         h1 {
             text-align: center;
             color: #0056b3;
@@ -159,55 +208,23 @@ class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
                     <th>Phone\nNumber</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td>1</td>
-                    <td>4578</td>
-                    <td>2024/09/15</td>
-                    <td>12:00 PM</td>
-                    <td>Amal</td>
-                    <td>Doctor</td>
-                    <td>35</td>
-                    <td>Male</td>
-                    <td>Technopark Phase 1, Kazhakkottam, Trivandrum</td>
-                    <td>1234567890</td>
-                </tr>
-                <tr>
-                    <td>1</td>
-                    <td>4578</td>
-                    <td>2024/09/15</td>
-                    <td>12:00 PM</td>
-                    <td>Amal</td>
-                    <td>Doctor</td>
-                    <td>35</td>
-                    <td>Male</td>
-                    <td>Technopark Phase 1, Kazhakkottam, Trivandrum</td>
-                    <td>1234567890</td>
-                </tr>
-                <tr>
-                    <td>1</td>
-                    <td>4578</td>
-                    <td>2024/09/15</td>
-                    <td>12:00 PM</td>
-                    <td>Amal</td>
-                    <td>Doctor</td>
-                    <td>35</td>
-                    <td>Male</td>
-                    <td>Technopark Phase 1, Kazhakkottam, Trivandrum</td>
-                    <td>1234567890</td>
-                </tr>
-                <tr>
-                    <td>1</td>
-                    <td>4578</td>
-                    <td>2024/09/15</td>
-                    <td>12:00 PM</td>
-                    <td>Amal</td>
-                    <td>Doctor</td>
-                    <td>35</td>
-                    <td>Male</td>
-                    <td>Technopark Phase 1, Kazhakkottam, Trivandrum</td>
-                    <td>1234567890</td>
-                </tr>
+            <tbody>''';
+    for(int i=0;i<registrationReportList.length;i++){
+      _html += ''' <tr>
+                    <td>${i+1}</td>
+                    <td>${registrationReportList[i].regNo}</td>
+                    <td>${getDateFromRegDate(registrationReportList[i].regDate.toString())}</td>
+                    <td>${getTimeFromRegDate(registrationReportList[i].regDate.toString())}</td>
+                    <td>${registrationReportList[i].pName}</td>
+                    <td>${registrationReportList[i].fathersname}</td>
+                    <td>${registrationReportList[i].age}</td>
+                    <td>${registrationReportList[i].mothersname}</td>
+                    <td>${registrationReportList[i].address1}</td>
+                    <td>${registrationReportList[i].phoneNo}</td>
+                </tr>''';
+    }
+
+    _html += '''
             </tbody>
         </table>
     </div>
@@ -227,6 +244,74 @@ class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
   }
 
 
+  String getTimeFromRegDate(String regDate) {
+    List<String> parts = regDate.split('##');
+    if (parts.length > 1) {
+      return parts[1];
+    } else {
+      return '';
+    }
+  }
+
+  String? getDateFromRegDate(String regDate) {
+    List<String> parts = regDate.split('##');
+
+    if (parts.isNotEmpty) {
+      String dateString = parts[0];
+
+      try {
+        final DateTime date = DateTime.parse(
+            "${dateString.split('/')[2]}-${dateString.split('/')[1]}-${dateString.split('/')[0]}");
+
+        // Format the date to dd/MM/yyyy
+        final DateFormat formatter = DateFormat('dd/MM/yyyy');
+        return formatter.format(date);
+      } catch (e) {
+        print('Error parsing date: $e');
+        return null;
+      }
+    } else {
+      print('Invalid format');
+      return null;
+    }
+  }
+
+  Future<void> _generateExcel(String htmlContent) async {
+    try {
+      var document = parse(htmlContent);
+      var rows = document.getElementsByTagName('tr');
+
+      var excel = Excel.createExcel();
+      Sheet sheet = excel['Sheet1'];
+
+
+      for (var row in rows) {
+        var cells = row.getElementsByTagName('th').isNotEmpty
+            ? row.getElementsByTagName('th')
+            : row.getElementsByTagName('td');
+
+        List<dynamic> rowData = [];
+        for (var cell in cells) {
+          rowData.add(cell.innerHtml);
+        }
+        sheet.appendRow(rowData);
+      }
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/Registration Report.xlsx';
+      final file = File(filePath);
+
+      await file.writeAsBytes(await excel.encode()!);
+
+      await Share.shareXFiles(
+        [XFile(filePath)],
+        text: 'Check out this Excel file!',
+      );
+    } catch (e) {
+      print('Error generating Excel file: $e');
+    }
+  }
+
+
   _loadHTML() async {
     setHTML(
         "connelblaze@gmil.com",
@@ -238,6 +323,18 @@ class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
         mimeType: 'text/html',
         encoding: Encoding.getByName('utf-8')
     ));
+
+    Directory appDocDir = await getApplicationDocumentsDirectory();
+    final targetPath = appDocDir.path;
+    const targetFileName = "Registration report";
+    final generatedPdfFile =
+    await _flutterNativeHtmlToPdfPlugin.convertHtmlToPdf(
+      html: _html,
+      targetDirectory: targetPath,
+      targetName: targetFileName,
+    );
+
+    generatedPdfFilePath = generatedPdfFile?.path;
   }
 
   var _fromDate = TextEditingController();
@@ -245,12 +342,21 @@ class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
 
   void _setDefaultDates() {
     DateTime currentDate = DateTime.now();
-    DateTime fromDate = currentDate.subtract(Duration(days: 30));
+    DateTime fromDateNew = currentDate.subtract(Duration(days: 30));
 
     DateFormat dateFormat = DateFormat('dd/MM/yyyy');
 
-    _fromDate.text = dateFormat.format(fromDate);
-    _toDate.text = dateFormat.format(currentDate);
+    if(fromDate.isEmpty){
+      _fromDate.text = dateFormat.format(fromDateNew);
+    }else{
+      _fromDate.text = fromDate;
+    }
+
+    if(toDate.isEmpty){
+      _toDate.text = dateFormat.format(fromDateNew);
+    }else{
+      _toDate.text = toDate;
+    }
   }
 
   void _selectDate(BuildContext context, TextEditingController controller) async {
@@ -271,7 +377,7 @@ class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
                 color: Colors.blue,
               ),
             ),
-            inputDecorationTheme: InputDecorationTheme(
+            inputDecorationTheme: const InputDecorationTheme(
               border: OutlineInputBorder(),
             ),
           ),
@@ -289,183 +395,203 @@ class _RegistrationReportScreenState extends State<RegistrationReportScreen> {
   }
 
 
+  List<RegistrationReportModel> registrationReportList = [];
+
+
+  Future<bool> _onWillPop() async {
+    await context.pushRoute(const DashboardRoute());
+    return false;
+  }
   @override
   void initState() {
     super.initState();
     _setDefaultDates();
-    _loadHTML();
+    getRegistrationReportDetails();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        forceMaterialTransparency: true,
-        iconTheme: IconThemeData(color: Colors.black),
-        toolbarHeight: 120,
-        title: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            "Registration Report",
-            style: GoogleFonts.poppins(
-              color: Colors.black,
-              fontWeight: FontWeight.w500,
-              fontSize: 20,
-            ),
-          ),
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (String value) {
-              // Handle the selected action
-              switch (value) {
-                case 'share':
-                // Handle share action
-                  print('Share clicked');
-                  break;
-                case 'download':
-                // Handle download action
-                  print('Download clicked');
-                  break;
-                case 'print':
-                // Handle print action
-                  print('Print clicked');
-                  break;
-              }
-            },
-            itemBuilder: (BuildContext context) {
-              return [
-                PopupMenuItem<String>(
-                  value: 'share',
-                  child: ListTile(
-                    leading: Icon(Icons.share),
-                    title: Text('Share'),
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  onTap: () async {
-
-                  },
-                  value: 'download',
-                  child: ListTile(
-                    leading: Icon(Icons.download),
-                    title: Text('Download'),
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  value: 'print',
-                  child: ListTile(
-                    leading: Icon(Icons.print),
-                    title: Text('Print'),
-                  ),
-                ),
-              ];
-            },
-            child: Padding(
-              padding: const EdgeInsets.only(right: 15.0),
-              child: Icon(
-                Icons.share, // Use an appropriate icon here
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          forceMaterialTransparency: true,
+          iconTheme: IconThemeData(color: Colors.black),
+          toolbarHeight: 120,
+          leading: GestureDetector(
+              onTap: (){
+                context.pushRoute(const DashboardRoute());
+              },
+              child: Icon(Iconsax.arrow_left_2)),
+          title: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Registration Report",
+              style: GoogleFonts.poppins(
                 color: Colors.black,
-                size: 25,
+                fontWeight: FontWeight.w500,
+                fontSize: 20,
               ),
             ),
           ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(10), // Adjust height as needed
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Text("From Date", style: GoogleFonts.poppins(color: Colors.grey),),
-                      ),
-                      TextFormField(
-                        controller: _fromDate,
-                        readOnly: true,
-                        onTap: () => _selectDate(context, _fromDate),
-                        decoration: InputDecoration(
-                          hintText: 'From Date',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ],
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (String value) async{
+                // Handle the selected action
+                switch (value) {
+                  case 'share':
+                    await Share.shareXFiles(
+                      [XFile(generatedPdfFilePath!)],
+                      text: 'This is pdf file',
+                    );
+                    break;
+                  case 'share as Excel':
+                    await _generateExcel(_html);
+                    break;
+                  case 'download':
+                    // await _requestPermissions();
+                    break;
+                }
+              },
+              itemBuilder: (BuildContext context) {
+                return const[
+                  PopupMenuItem<String>(
+                    value: 'share',
+                    child: ListTile(
+                      leading: Icon(Icons.share),
+                      title: Text('Share'),
+                    ),
                   ),
-                ),
-                SizedBox(width: 8.0),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Text("To Date", style: GoogleFonts.poppins(color: Colors.grey),),
-                      ),
-                      TextFormField(
-                        controller: _toDate,
-                        readOnly: true,
-                        onTap: () => _selectDate(context, _toDate),
-                        decoration: InputDecoration(
-                          hintText: 'To Date',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ],
+                  PopupMenuItem<String>(
+                    value: 'share as Excel',
+                    child: ListTile(
+                      leading: Icon(Icons.share),
+                      title: Text('share as Excel'),
+                    ),
                   ),
+                  // PopupMenuItem<String>(
+                  //   value: 'print',
+                  //   child: ListTile(
+                  //     leading: Icon(Icons.print),
+                  //     title: Text('Print'),
+                  //   ),
+                  // ),
+                ];
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(right: 15.0),
+                child: Icon(
+                  Icons.share, // Use an appropriate icon here
+                  color: Colors.black,
+                  size: 25,
                 ),
-                SizedBox(width: 8.0),
-                Expanded(
+              ),
+            ),
+          ],
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight(10), // Adjust height as needed
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(left: 8.0),
-                          child: Text("", style: GoogleFonts.poppins(color: Colors.grey),),
+                          child: Text("From Date", style: GoogleFonts.poppins(color: Colors.grey),),
                         ),
-                        GestureDetector(
-                          onTap: (){
-                            context.pushRoute(LabBillReportRoute());
-                          },
-                          child: Container(
-                            height: MediaQuery.of(context).size.height * 0.05,
-                            width: double.maxFinite,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Color(0XFF333E9F), Color(0XFF77209F)],
-                                begin: Alignment.bottomLeft,
-                                end: Alignment.topRight, // Define the gradient end
-                              ),
-                              borderRadius: BorderRadius.circular(10), // Optional border radius
-                            ),
-                            // color: Color(0XFF1875D3),
-                            child: Center(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Iconsax.search_normal, color: Colors.white,),
-                                    SizedBox(width: 8),
-                                    Text("Search", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500),),
-                                  ],
-                                )
-                            ),
+                        TextFormField(
+                          controller: _fromDate,
+                          readOnly: true,
+                          onTap: () => _selectDate(context, _fromDate),
+                          decoration: InputDecoration(
+                            hintText: 'From Date',
+                            border: OutlineInputBorder(),
                           ),
-                        )
+                        ),
                       ],
-                    )
-                ),
-              ],
+                    ),
+                  ),
+                  SizedBox(width: 8.0),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Text("To Date", style: GoogleFonts.poppins(color: Colors.grey),),
+                        ),
+                        TextFormField(
+                          controller: _toDate,
+                          readOnly: true,
+                          onTap: () => _selectDate(context, _toDate),
+                          decoration: InputDecoration(
+                            hintText: 'To Date',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 8.0),
+                  Expanded(
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Text("", style: GoogleFonts.poppins(color: Colors.grey),),
+                          ),
+                          GestureDetector(
+                            onTap: (){
+                              context.pushRoute(RegistrationReportRoute(fromDate: _fromDate.text, toDate: _toDate.text));
+                            },
+                            child: Container(
+                              height: MediaQuery.of(context).size.height * 0.05,
+                              width: double.maxFinite,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Color(0XFF333E9F), Color(0XFF77209F)],
+                                  begin: Alignment.bottomLeft,
+                                  end: Alignment.topRight, // Define the gradient end
+                                ),
+                                borderRadius: BorderRadius.circular(10), // Optional border radius
+                              ),
+                              // color: Color(0XFF1875D3),
+                              child: Center(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Iconsax.search_normal, color: Colors.white,),
+                                      SizedBox(width: 8),
+                                      Text("Search", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500),),
+                                    ],
+                                  )
+                              ),
+                            ),
+                          )
+                        ],
+                      )
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      body: WebViewWidget(
-        controller: _con,
+        body: WebViewWidget(
+          controller: _con,
+        ),
       ),
     );
+  }
+
+
+  Future<void> getRegistrationReportDetails() async {
+    registrationReportList.clear();
+    registrationReportList = await ref.read(registrationProvider).getAllRegistrationReportDetails(_fromDate.text, _toDate.text);
+    _loadHTML();
+    setState(() {});
   }
 }

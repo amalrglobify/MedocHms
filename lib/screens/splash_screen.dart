@@ -34,19 +34,28 @@ class _SplashScreenState extends State<SplashScreen>  with TickerProviderStateMi
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // backgroundColor: const Color(0xFF37EB58),
-      body: SafeArea(
+      backgroundColor: Colors.white,
+      body: Container(
+        decoration: BoxDecoration(
+          color: Colors.white
+        ),
+        height:   MediaQuery.of(context).size.height * 1,
+        width:   MediaQuery.of(context).size.width * 1,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Padding(
-              padding: const EdgeInsets.all(30.0),
-              child: Image.asset("assets/images/medochmslogo.png"),
+              padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.2),
+              child: Image.asset("assets/images/medocsplashlogo.png", width: MediaQuery.of(context).size.width * 0.5,),
             ),
-            Gap(50),
-            CircularProgressIndicator(color: Colors.black,)
+            Image.asset("assets/images/doctorlogo.png",
+                width: MediaQuery.of(context).size.width * 0.98,
+                height: MediaQuery.of(context).size.height * 0.6,
+              fit: BoxFit.cover,
+            ),
           ],
-        )
+        ),
       ),
     );
   }

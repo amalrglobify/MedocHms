@@ -3,11 +3,10 @@ import 'dart:io';
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:excel/excel.dart';
-import 'package:flutter_native_html_to_pdf/flutter_native_html_to_pdf.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/parser.dart';
-import 'package:medochms/Provider/reports/reports_provider.dart';
-import 'package:medochms/models/reports/procedure_bill_report_model.dart';
+import 'package:medochms/Provider/dashboard/dashboard_provider.dart';
+import 'package:medochms/models/dashboard/collection_report_model.dart';
 import 'package:medochms/routes/app_router.gr.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,19 +15,21 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter_native_html_to_pdf/flutter_native_html_to_pdf.dart';
 import 'dart:convert';
 
 @RoutePage()
-class ProcedureBillReportScreen extends ConsumerStatefulWidget {
+class CollectionReportScreen extends ConsumerStatefulWidget {
   final String fromDate;
   final String toDate;
-  const ProcedureBillReportScreen({super.key, required this.fromDate, required this.toDate});
+  const CollectionReportScreen({super.key, required this.fromDate, required this.toDate });
 
   @override
-  ConsumerState<ProcedureBillReportScreen> createState() => _ProcedureBillReportScreenState(this.fromDate, this.toDate);
+  ConsumerState<CollectionReportScreen> createState() => _CollectionReportScreenState(this.fromDate, this.toDate);
 }
 
-class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportScreen> {
+class _CollectionReportScreenState extends ConsumerState<CollectionReportScreen> {
   String? generatedPdfFilePath;
   final _flutterNativeHtmlToPdfPlugin = FlutterNativeHtmlToPdf();
   final Completer<WebViewController> _controller =
@@ -37,21 +38,20 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
   String _html = "";
   String fromDate;
   String toDate;
-  double totalAmount = 0.0;
-  double totalDiscount = 0.0;
-  double totalFinalAmount = 0.0;
 
-  _ProcedureBillReportScreenState(this.fromDate, this.toDate);
+  List<CollectionReportModel> collectionReportList = [];
 
+
+  _CollectionReportScreenState(this.fromDate, this.toDate);
 
   setHTML(String email, String phone, String name) {
-    _html = '''
+    _html += '''
    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport",initial-scale=1.0">
-    <title>Hospital Bill Report</title>
+    <title>Hospital Collection Report</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -68,11 +68,19 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
             border-radius: 8px;
             background-color: #fff;
         }
-                 th, td {
+        th, td {
         border: 1px solid #ddd; /* Optional: adds borders to cells */
         padding: 8px;
         text-align: left;
     }
+    /* Style for the address column */
+td:nth-child(2) { 
+    overflow: visible; /* Allow overflow to be visible */
+    word-wrap: break-word; /* Allow wrapping of long addresses */
+    white-space: normal; /* Allow normal whitespace handling */
+    height: auto; /* Allow the height to adjust based on content */
+    font-weight: bold; /* Make the text bold */
+}
 
         h1 {
             text-align: center;
@@ -155,7 +163,7 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
             <p>123 Health Street, Wellness City, HC 12345</p>
     </div>
 
-    <h1>Procedure Bill Report</h1>
+    <h1>Collection Report</h1>
 
     <div class="content">
         <table>
@@ -174,39 +182,32 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
             <thead>
                 <tr>
                     <th>Sl#</th>
-                    <th>BNo</th>
-                    <th>Reg</th>
-                    <th>Bill\nDate</th>
-                    <th>Time</th>
-                    <th>Patient</th>
-                    <th>Doctor</th>
+                    <th>BillType</th>
+                    <th>Cash</th>
+                    <th>Upi</th>
+                    <th>Card</th>
+                    <th>Credit</th>
                     <th>Amount</th>
                     <th>Discount</th>
                     <th>Total\nAmount</th>
                 </tr>
             </thead>
             <tbody>''';
-    for(int i=0; i<procedureBillReportList.length; i++){
-      _html += '''
-      <tr>
-                    <td>$i</td>
-                    <td>${procedureBillReportList[i].billNo.toString()}</td>
-                    <td>${procedureBillReportList[i].regNo.toString()}</td>
-                    <td>${procedureBillReportList[i].billDate.toString()}</td>
-                    <td>${getTimeFromRegDate(procedureBillReportList[i].department.toString())}</td>
-                    <td>${procedureBillReportList[i].name.toString()}</td>
-                    <td>${procedureBillReportList[i].hospital.toString()}</td>
-                    <td>${procedureBillReportList[i].netAmt.toString()}</td>
-                    <td>${procedureBillReportList[i].discAmt.toString()}</td>
-                    <td>${procedureBillReportList[i].totalAmt.toString()}</td>
-                </tr> ''';
+    for(int i=0; i<collectionReportList.length; i++){
+      _html += '''<tr>
+                    <td>${i+1}</td>
+                    <td>${collectionReportList[i].name.toString()}</td>
+                    <td>${collectionReportList[i].totalAmt}</td>
+                    <td>${collectionReportList[i].totalAmt}</td>
+                    <td>${collectionReportList[i].totalAmt}</td>
+                    <td>${collectionReportList[i].totalAmt}</td>
+                    <td>${collectionReportList[i].totalAmt}</td>
+                    <td>${collectionReportList[i].discAmt}</td>
+                    <td>${collectionReportList[i].totalAmt}</td>
+                </tr>''';
     }
-     _html += '''           <tr class="total">
-                    <td colspan="7">Total Amount</td>
-                    <td>$totalAmount</td>
-                    <td>$totalDiscount</td>
-                    <td>$totalFinalAmount</td>
-                </tr>
+    _html += '''
+            
             </tbody>
         </table>
     </div>
@@ -225,6 +226,38 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
   ''';
   }
 
+  String getTimeFromRegDate(String regDate) {
+    List<String> parts = regDate.split('##');
+    if (parts.length > 1) {
+      return parts[1];
+    } else {
+      return '';
+    }
+  }
+
+  String? getDateFromRegDate(String regDate) {
+    List<String> parts = regDate.split('##');
+
+    if (parts.isNotEmpty) {
+      String dateString = parts[0];
+
+      try {
+        final DateTime date = DateTime.parse(
+            "${dateString.split('/')[2]}-${dateString.split('/')[1]}-${dateString.split('/')[0]}");
+
+        // Format the date to dd/MM/yyyy
+        final DateFormat formatter = DateFormat('dd/MM/yyyy');
+        return formatter.format(date);
+      } catch (e) {
+        print('Error parsing date: $e');
+        return null;
+      }
+    } else {
+      print('Invalid format');
+      return null;
+    }
+  }
+
 
   Future<void> _generateExcel(String htmlContent) async {
     try {
@@ -233,7 +266,6 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
 
       var excel = Excel.createExcel();
       Sheet sheet = excel['Sheet1'];
-
 
       for (var row in rows) {
         var cells = row.getElementsByTagName('th').isNotEmpty
@@ -247,7 +279,7 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
         sheet.appendRow(rowData);
       }
       final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/Procedure Bill.xlsx';
+      final filePath = '${directory.path}/Collection Report.xlsx';
       final file = File(filePath);
 
       await file.writeAsBytes(await excel.encode()!);
@@ -275,7 +307,7 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
 
     Directory appDocDir = await getApplicationDocumentsDirectory();
     final targetPath = appDocDir.path;
-    const targetFileName = "Procedure bill report";
+    const targetFileName = "Collection report";
     final generatedPdfFile =
     await _flutterNativeHtmlToPdfPlugin.convertHtmlToPdf(
       html: _html,
@@ -284,15 +316,6 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
     );
 
     generatedPdfFilePath = generatedPdfFile?.path;
-  }
-
-  String getTimeFromRegDate(String regDate) {
-    List<String> parts = regDate.split('##');
-    if (parts.isNotEmpty) {
-      return parts.last.trim(); // Use last to get the last element and trim any whitespace
-    } else {
-      return '';
-    }
   }
 
   var _fromDate = TextEditingController();
@@ -335,7 +358,7 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
                 color: Colors.blue,
               ),
             ),
-            inputDecorationTheme: const InputDecorationTheme(
+            inputDecorationTheme: InputDecorationTheme(
               border: OutlineInputBorder(),
             ),
           ),
@@ -352,7 +375,7 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
     }
   }
 
-  List<ProcedureBillReportModel> procedureBillReportList = [];
+
 
   Future<bool> _onWillPop() async {
     await context.pushRoute(const DashboardRoute());
@@ -363,7 +386,7 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
   void initState() {
     super.initState();
     _setDefaultDates();
-    getProcedureBillReportDetails();
+    getCollectionReportDetails();
   }
 
   @override
@@ -383,7 +406,7 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
           title: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              "Procedure Bill Report",
+              "Collection Report",
               style: GoogleFonts.poppins(
                 color: Colors.black,
                 fontWeight: FontWeight.w500,
@@ -406,7 +429,7 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
                     await _generateExcel(_html);
                     break;
                   case 'download':
-                    // await _requestPermissions();
+                  // await _requestPermissions();
                     break;
                 }
               },
@@ -503,7 +526,7 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
                           ),
                           GestureDetector(
                             onTap: (){
-                              context.pushRoute(ProcedureBillReportRoute(fromDate: _fromDate.text, toDate: _toDate.text));
+                              context.pushRoute(CollectionReportRoute(fromDate: _fromDate.text, toDate: _toDate.text));
                             },
                             child: Container(
                               height: MediaQuery.of(context).size.height * 0.05,
@@ -544,22 +567,11 @@ class _ProcedureBillReportScreenState extends ConsumerState<ProcedureBillReportS
     );
   }
 
-  Future<void> getProcedureBillReportDetails() async {
-    procedureBillReportList.clear();
-    procedureBillReportList = await ref.read(reportsProvider).getAllProcedureBillReportDetails(_fromDate.text, _toDate.text);
-    getTotalValues();
+  Future<void> getCollectionReportDetails() async {
+    collectionReportList.clear();
+    collectionReportList = await ref.read(dashboardProvider).getAllCollectionReportDetails(_fromDate.text, _toDate.text);
     _loadHTML();
+    print(collectionReportList.length);
     setState(() {});
-  }
-
-  void getTotalValues() {
-    totalAmount = 0.0;
-    totalDiscount = 0.0;
-    totalFinalAmount = 0.0;
-    for(int i=0; i<procedureBillReportList.length; i++) {
-      totalAmount += procedureBillReportList[i].netAmt ?? 0.0;
-      totalDiscount += procedureBillReportList[i].discAmt ?? 0.0;
-      totalFinalAmount += procedureBillReportList[i].totalAmt ?? 0.0;
-    }
   }
 }

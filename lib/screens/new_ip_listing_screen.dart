@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:medochms/Provider/ip/ip_provider.dart';
+import 'package:medochms/models/ip/ip_listing_model.dart';
 
 import '../Provider/revisit/revisit_Provider.dart';
 import '../models/revisit/revisit_list_model.dart';
@@ -21,26 +23,25 @@ class _NewIpListingScreenState extends ConsumerState<NewIpListingScreen> {
 
   var _search = TextEditingController();
 
-  Future<List<AllProducts>> _fetchProducts() async {
-    List<AllProducts> products = await ref.read(revisitListProvider).getAllRevisitEntriesList();
-    allProducts.clear();
-    showedProducts.clear();
-    allProducts.addAll(products);
-    showedProducts.addAll(products);
-    return products;
+    _fetchIPList() async {
+    List<IPListingModel> ipList = await ref.read(ipListProvider).getAllIpListPatients();
+    allIpList.clear();
+    showedIPList.clear();
+    allIpList.addAll(ipList);
+    showedIPList.addAll(ipList);
+    setState(() {});
+    return ipList;
   }
 
-
-  late Future<List<AllProducts>> _productsFuture;
-  List<AllProducts> allProducts = [];
-  List<AllProducts> showedProducts = [];
+  List<IPListingModel> allIpList = [];
+  List<IPListingModel> showedIPList = [];
 
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    _productsFuture = _fetchProducts();
+    _fetchIPList();
   }
 
   Future<bool> _onWillPop() async {
@@ -88,14 +89,14 @@ class _NewIpListingScreenState extends ConsumerState<NewIpListingScreen> {
                   ),
                   onChanged: (v){
                     if(v.isNotEmpty){
-                      // setState(() {
-                      //   searchProductByName(v);
-                      // });
+                      setState(() {
+                        searchPatientsByName(v);
+                      });
                     }else{
-                      // setState(() {
-                      //   showedProducts.clear();
-                      //   showedProducts = allProducts;
-                      // });
+                      setState(() {
+                        showedIPList.clear();
+                        showedIPList = allIpList;
+                      });
                     }
                   },
                 ),
@@ -103,32 +104,13 @@ class _NewIpListingScreenState extends ConsumerState<NewIpListingScreen> {
               SizedBox(height: 10,),
               Flexible(
                   flex: 25,
-                  child: FutureBuilder<List<AllProducts>>(
-                    future: _productsFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        if (snapshot.hasError) {
-                          return Center(child: Text(snapshot.error.toString()));
-                        } else if (snapshot.hasData) {
-                          List<AllProducts>? products = snapshot.data;
-                          if (products == null || products.isEmpty) {
-                            return const Center(child: Text("No data available"));
-                          }
-                          return ListView.builder(
-                            itemCount: showedProducts.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              AllProducts product = showedProducts[index];
-                              return newIpList(product, index, showedProducts.length);
-                            },
-                          );
-                        } else {
-                          return const Center(child: Text("No data available"));
-                        }
-                      } else {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                  child: (showedIPList.isNotEmpty)?ListView.builder(
+                    itemCount: showedIPList.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      IPListingModel ipListItem = showedIPList[index];
+                      return newIpList(ipListItem, index, showedIPList.length);
                     },
-                  )
+                  ):const Center(child: CircularProgressIndicator())
               )
             ],
           ),
@@ -137,86 +119,165 @@ class _NewIpListingScreenState extends ConsumerState<NewIpListingScreen> {
     );
   }
 
-  Widget newIpList(AllProducts allProduct, int index, int lastIndex) {
+  Widget newIpList(IPListingModel ipList, int index, int lastIndex) {
     final GlobalKey widgetKey = GlobalKey();
     return Padding(
-      padding: EdgeInsets.only(bottom: index != lastIndex-1 ? 8.0 : 75.0),
+      padding: EdgeInsets.only(bottom: index != lastIndex-1 ? 8.0 : 10.0),
       child: Padding(
-          padding: const EdgeInsets.only(top: 10.0, bottom: 10.0, left: 5.0, right: 5.0),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.only(left: 5.0, right: 5.0),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8), // Optional border radius
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("Patient Name", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),),
-                          Container(
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(8), // Optional border radius
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text("Admitted", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                              )),
-                        ],
-                      ),
-                      Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                              flex:3,
-                              child: Center(
-                                  child:
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text("OP ID : 01", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                                      Text("Reg : WH - 3", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                                    ],
-                                  ))),
-                          Flexible(
-                              flex: 5,
-                              child: Center(
-                                  child:
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text("DOB : 19/09/1998", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                                      Text("Ip No : 2024/111", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                                    ],
-                                  ))),
-                          Flexible(
-                              flex: 5,
-                              child: Center(
-                                  child:
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text("Gender : Female", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                                      Text("Date : 19/09/1998", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
-                                    ],
-                                  ))),
-                        ],
-                      ),
-                    ],
-                  ),
+          padding: const EdgeInsets.only(top: 0.0, bottom: 10.0, left: 0.0, right: 0.0),
+          child: Material(
+            elevation: 3,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.grey,
+                  width: 0.2,
                 ),
               ),
-            ],
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(ipList.patientName.toString(), style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),),
+                        Container(
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(6.0),
+                              child: Text("Admitted", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 9),),
+                            )),
+                      ],
+                    ),
+                    Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                            flex:5,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "IP No : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: ipList.iPNumber.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 4,),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "Reg : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: "${ipList.oPSerName}/${ipList.oPNumber}",
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 4,),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "Room No : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: ipList.shiftName.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )),
+                        Flexible(
+                            flex: 5,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "DOB : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: ipList.dOB.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 4,),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "Gender : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: ipList.gender.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 4,),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "Date : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: ipList.revisitDate.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           )
       ),
     );
+  }
+
+  void searchPatientsByName(String searchName) {
+    showedIPList = allIpList.where(
+            (patients) => patients.patientName!.toLowerCase().contains(searchName.toLowerCase())
+    ).toList();
   }
 }

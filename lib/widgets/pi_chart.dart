@@ -16,7 +16,7 @@ class PieChartWidget extends StatelessWidget {
             height: 100,
             child: Wrap(
               alignment: WrapAlignment.center,
-              children: _legendItems(sectors).map((item) {
+              children: _legendItems(sectors, context).map((item) {
                 return Container(
                   width: MediaQuery.of(context).size.width * 0.46,
                   child: item,
@@ -51,7 +51,7 @@ class PieChartWidget extends StatelessWidget {
     return list;
   }
 
-  List<Widget> _legendItems(List<Sector> sectors) {
+  List<Widget> _legendItems(List<Sector> sectors, context) {
     return sectors.map((sector) {
       return Padding(
         padding: const EdgeInsets.all(4.0),
@@ -63,12 +63,16 @@ class PieChartWidget extends StatelessWidget {
               color: sector.color,
             ),
             SizedBox(width: 8),
-            Text(
-              sector.name,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+            Container(
+              width: MediaQuery.of(context).size.width * 0.37,
+              child: Text(
+                sector.name,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  overflow: TextOverflow.ellipsis
+                ),
               ),
             ),
           ],

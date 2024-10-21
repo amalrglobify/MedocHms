@@ -8,6 +8,7 @@ import 'package:medochms/rest/hive_repo.dart';
 import '../../models/dashboard/dashboard_details_model.dart';
 import '../../models/departments/departments_model.dart';
 import '../../models/doctors/doctors_available.dart';
+import '../../models/doctors/doctors_timesheet_model.dart';
 import '../../models/revisit/revisit_list_model.dart';
 import '../../rest/rest_client_provider.dart';
 
@@ -44,6 +45,32 @@ class DoctorsProvider extends ChangeNotifier {
       notifyListeners();
 
       return _doctorsAvailableList;
+    } catch (e, stack) {
+      print(e);
+      print(stack);
+      notifyListeners();
+
+      return [];
+    }
+  }
+
+
+
+  List<DoctorsAvailabilityTimeSheetList> _doctorsAvailabilityTimeSheetList = [];
+
+  Future<List<DoctorsAvailabilityTimeSheetList>> getAvailableDoctorsTimeSheet(String doctorsId) async {
+    final map = <String, dynamic>{};
+    map.putIfAbsent("AvailableId", () => doctorsId);
+    try {
+      final response = await _restClient.getAvailableDoctorsTimeSheet(map);
+
+      final doctorsAvailabilityTimeSheetList = DoctorsAvailabilityTimeSheet.fromJson(response);
+
+      _doctorsAvailabilityTimeSheetList = doctorsAvailabilityTimeSheetList.doctorsAvailabilityTimeSheetList ?? [];
+
+      notifyListeners();
+
+      return _doctorsAvailabilityTimeSheetList;
     } catch (e, stack) {
       print(e);
       print(stack);

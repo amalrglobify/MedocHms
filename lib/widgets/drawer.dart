@@ -25,7 +25,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
             height: MediaQuery.of(context).size.height * 0.25,
             child: UserAccountsDrawerHeader(
               accountName: Text(
-                'User Name',
+                HiveRepo.instance.user!.oList![0].userName.toString(),
                 style: GoogleFonts.poppins(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -104,28 +104,35 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 leading: Icon(Icons.library_books, color: Color(0XFF3C001F)),
                 title: Text('Lab Bill Report', style: GoogleFonts.poppins(),),
                 onTap: () {
-                  context.pushRoute(LabBillReportRoute());
+                  context.pushRoute(LabBillReportRoute(fromDate: "", toDate: ""));
                 },
               ),
               ListTile(
                 leading: Icon(Icons.library_books, color: Color(0XFF3C001F)),
                 title: Text('Procedure Bill Report', style: GoogleFonts.poppins(),),
                 onTap: () {
-                  context.pushRoute(ProcedureBillReportRoute());
+                  context.pushRoute(ProcedureBillReportRoute(fromDate: "", toDate: ""));
                 },
               ),
               ListTile(
                 leading: Icon(Icons.library_books, color: Color(0XFF3C001F)),
                 title: Text('Registration Report', style: GoogleFonts.poppins(),),
                 onTap: () {
-                  context.pushRoute(RegistrationReportRoute());
+                  context.pushRoute(RegistrationReportRoute(fromDate: "", toDate: ""));
                 },
               ),
               ListTile(
                 leading: Icon(Icons.library_books, color: Color(0XFF3C001F)),
                 title: Text('Revist Report', style: GoogleFonts.poppins(),),
                 onTap: () {
-                  context.pushRoute(RevisitReportRoute());
+                  context.pushRoute(RevisitReportRoute(fromDate: "", toDate: ""));
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.library_books, color: Color(0XFF3C001F)),
+                title: Text('Collection Report', style: GoogleFonts.poppins(),),
+                onTap: () {
+                  context.pushRoute(CollectionReportRoute(fromDate: "", toDate: ""));
                 },
               ),
             ],

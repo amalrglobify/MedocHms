@@ -22,26 +22,25 @@ class _RevisitListingScreenState extends ConsumerState<RevisitListingScreen> {
 
   var _search = TextEditingController();
 
-  Future<List<AllProducts>> _fetchProducts() async {
-    List<AllProducts> products = await ref.read(revisitListProvider).getAllRevisitEntriesList();
-    allProducts.clear();
-    showedProducts.clear();
-    allProducts.addAll(products);
-    showedProducts.addAll(products);
-    return products;
+  getRevisitEntriesList() async {
+    List<RevisitListingModel> revisitEntries = await ref.read(revisitListProvider).getAllRevisitEntriesList();
+    allRevisitEntries.clear();
+    showedRevisitEntries.clear();
+    allRevisitEntries.addAll(revisitEntries);
+    showedRevisitEntries.addAll(revisitEntries);
+    setState(() {});
+    return revisitEntries;
   }
 
-
-  late Future<List<AllProducts>> _productsFuture;
-  List<AllProducts> allProducts = [];
-  List<AllProducts> showedProducts = [];
+  List<RevisitListingModel> allRevisitEntries = [];
+  List<RevisitListingModel> showedRevisitEntries = [];
 
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    _productsFuture = _fetchProducts();
+   getRevisitEntriesList();
   }
 
   Future<bool> _onWillPop() async {
@@ -90,14 +89,14 @@ class _RevisitListingScreenState extends ConsumerState<RevisitListingScreen> {
                   ),
                   onChanged: (v){
                     if(v.isNotEmpty){
-                      // setState(() {
-                      //   searchProductByName(v);
-                      // });
+                      setState(() {
+                        searchPatientsByName(v);
+                      });
                     }else{
-                      // setState(() {
-                      //   showedProducts.clear();
-                      //   showedProducts = allProducts;
-                      // });
+                      setState(() {
+                        showedRevisitEntries.clear();
+                        showedRevisitEntries = allRevisitEntries;
+                      });
                     }
                   },
                 ),
@@ -105,32 +104,13 @@ class _RevisitListingScreenState extends ConsumerState<RevisitListingScreen> {
               SizedBox(height: 10,),
               Flexible(
                   flex: 25,
-                  child: FutureBuilder<List<AllProducts>>(
-                    future: _productsFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        if (snapshot.hasError) {
-                          return Center(child: Text(snapshot.error.toString()));
-                        } else if (snapshot.hasData) {
-                          List<AllProducts>? products = snapshot.data;
-                          if (products == null || products.isEmpty) {
-                            return const Center(child: Text("No data available"));
-                          }
-                          return ListView.builder(
-                            itemCount: showedProducts.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              AllProducts product = showedProducts[index];
-                              return productListForOrder(product, index, showedProducts.length);
-                            },
-                          );
-                        } else {
-                          return const Center(child: Text("No data available"));
-                        }
-                      } else {
-                        return Center(child: CircularProgressIndicator());
-                      }
+                  child: (showedRevisitEntries.isNotEmpty)?ListView.builder(
+                    itemCount: showedRevisitEntries.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      RevisitListingModel revisitEntries = showedRevisitEntries[index];
+                      return revisitList(revisitEntries, index, showedRevisitEntries.length);
                     },
-                  )
+                  ):const Center(child: CircularProgressIndicator())
               )
             ],
           ),
@@ -139,165 +119,146 @@ class _RevisitListingScreenState extends ConsumerState<RevisitListingScreen> {
     );
   }
 
-  Widget productListForOrder(AllProducts allProduct, int index, int lastIndex) {
+  Widget revisitList(RevisitListingModel revisitList, int index, int lastIndex) {
     final GlobalKey widgetKey = GlobalKey();
     return Padding(
-      padding: EdgeInsets.only(bottom: index != lastIndex-1 ? 8.0 : 75.0),
-      child: ExpansionTile(
-        tilePadding: EdgeInsets.zero,
-        initiallyExpanded: false,
-        maintainState: true,
-        childrenPadding: EdgeInsets.zero,
-        backgroundColor: Colors.grey.shade50,
-        collapsedBackgroundColor: Colors.grey.shade50,
-        shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(10))),
-        collapsedShape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(20))),
-        title: Container(
-          height: MediaQuery.of(context).size.height * 0.09,
-          width: double.maxFinite,
-          padding: const EdgeInsets.all(5.0),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15.0),
-            // color: Color(0XFFF1F5FF),
-            // boxShadow: [
-            //   BoxShadow(
-            //     color: Colors.grey.shade300,
-            //     spreadRadius: 1,
-            //     blurRadius: 5,
-            //     offset: Offset(0, 3),
-            //   ),
-            // ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                flex: 2,
-                child: Container(
-                    key: widgetKey,
-                    width: MediaQuery.of(context).size.width * 0.5,
-                    child: CircleAvatar(
-                      backgroundColor: Color(0XFF333E9F),
-                      child: Icon(Iconsax.user, color: Colors.white,),
-                    )),
+      padding: EdgeInsets.only(bottom: index != lastIndex-1 ? 8.0 : 10.0),
+      child: Padding(
+          padding: const EdgeInsets.only(top: 0.0, bottom: 10.0, left: 0.0, right: 0.0),
+          child: Material(
+            elevation: 3,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.grey,
+                  width: 0.2,
+                ),
               ),
-              const SizedBox(width: 10,),
-              Flexible(
-                flex: 8,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                         "Patient Name" ?? "",
-                          maxLines: 1,
-                          style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500
-                          ),
-                        ),
-                        Text(
-                          "Age : 30" ?? "",
-                          style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500
-                          ),
-                        ),
-                        Text(
-                          'Gender : Male',
-                          style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500
-                          ),
-                        ),
+                        Text(revisitList.patientName.toString(), style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),),
+                        Text("Revisit Id : ${revisitList.revId.toString()}", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),),
                       ],
+                    ),
+                    Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                            flex: 5,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "DOB : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: revisitList.dOB.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 4,),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "Mobile No : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: revisitList.contact.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )),
+                        Flexible(
+                            flex: 5,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "Gender : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: revisitList.gender.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: 4,),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "Revisit Date : ",
+                                        style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                                      ),
+                                      TextSpan(
+                                        text: revisitList.revisitDate.toString(),
+                                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )),
+                      ],
+                    ),
+                    const SizedBox(height: 4,),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: "Address : ",
+                            style: GoogleFonts.poppins(color: Colors.black54, fontWeight: FontWeight.w400, fontSize: 13),
+                          ),
+                          TextSpan(
+                            text: revisitList.add1.toString(),
+                            style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 5,)
-            ],
-          ),
-        ),
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(top: 10.0, bottom: 10.0, left: 5.0, right: 5.0),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.only(left: 5.0, right: 5.0),
-                  height: 30,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Color(0XFF77209F),
-                    borderRadius: BorderRadius.circular(8), // Optional border radius
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                          flex:2,
-                          child: Center(child: Text("SlNo#", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 13),))),
-                      Flexible(
-                          flex: 3,
-                          child: Center(child: Text("OP ID", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 13),))),
-                      Flexible(
-                          flex: 4,
-                          child: Center(child: Text("Date", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 13),))),
-                      Flexible(
-                          flex: 5,
-                          child: Center(child: Text("Consultant", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 13),))),
-                    ],
-                  ),
-                ),
-                ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: 10,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemBuilder: (BuildContext context, index){
-                      return Container(
-                          padding: const EdgeInsets.only(left: 8.0, right: 8.0),
-                          height: MediaQuery.of(context).size.height * 0.05,
-                          width: double.maxFinite,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(15.0),
-                            color: Colors.transparent,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Flexible(
-                                  flex: 2,
-                                  child: Center(child: Text("12", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),))),
-                              Flexible(
-                                  flex: 3,
-                                  child: Center(child: Text("58452", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),))),
-                              Flexible(
-                                  flex: 4,
-                                  child: Center(child: Text("19/09/2024", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),))),
-                              Flexible(
-                                  flex: 5,
-                                  child: Center(child: Text("Dr. M Mukesh", style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),))),
-                            ],
-                          )
-                      );
-                    }
-                )
-              ],
-            )
-          ),
-        ],
+            ),
+          )
       ),
     );
   }
+
+  void searchPatientsByName(String searchName) {
+    showedRevisitEntries = allRevisitEntries.where(
+            (patients) => patients.patientName!.toLowerCase().contains(searchName.toLowerCase())
+    ).toList();
+  }
+
 }
 
 

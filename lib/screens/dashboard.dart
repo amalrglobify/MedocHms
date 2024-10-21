@@ -1,20 +1,25 @@
 
-
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
 import 'package:medochms/Provider/dashboard/dashboard_provider.dart';
 import 'package:medochms/Provider/doctors/doctors_provider.dart';
 import 'package:medochms/Provider/revisit/revisit_Provider.dart';
+import 'package:medochms/models/dashboard/collection_report_model.dart';
+import 'package:medochms/models/doctors/departments_overview.dart';
 import 'package:medochms/models/revisit/revisit_graph_model.dart';
 import 'package:medochms/routes/app_router.gr.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../models/dashboard/dashboard_details_model.dart';
 import '../models/doctors/doctors_available.dart';
+import '../models/doctors/doctors_timesheet_model.dart';
+import '../models/revisit/revisit_list_model.dart';
 import '../theme/colors.dart';
 import '../widgets/appbar.dart';
 import '../widgets/drawer.dart';
@@ -39,19 +44,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   List<_ChartData> chartData = [];
   late TooltipBehavior _tooltip;
   List<DashboardDetailsList> dashboardWidgetsList = [];
+  List<DepartmentsOverviewList> departmentsOverviewList = [];
   List<DoctorsAvailableList> doctorsAvailableList = [];
+  List<DoctorsAvailabilityTimeSheetList> doctorsAvailabilityTimeSheetList = [];
   List<RevisitGraphDetailsList> revisitGraphDetailsList = [];
+  List<CollectionReportModel> collectionReportList = [];
+  List<RevisitListingModel> revisitEntries = [];
   double highestRevisitValue = 10;
   String revisitFirstDate = "";
   String revisitLastDate = "";
+  double totalCollectionAmount = 0.0;
+  String dateVariable = "";
+  String selectedDoctorName = "";
+
+  List<Sector> departmentsData = [];
 
   @override
   void initState() {
     _tooltip = TooltipBehavior(enable: true);
+    getCollectionReportDetails();
     getDashboardDetails();
     getAvailableDoctorsList();
     getRevisitGraphDetails();
+    getDepartmentsOverview();
+    getRevisitEntries();
     super.initState();
+  }
+
+  Future<void> getCollectionReportDetails() async {
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat('dd/MM/yyyy').format(now);
+    dateVariable = formattedDate;
+    collectionReportList.clear();
+    collectionReportList = await ref.read(dashboardProvider).getAllCollectionReportDetails('01/01/1990', dateVariable.toString());
+    totalCollectionAmount = 0.0;
+    for(int i=0; i<collectionReportList.length; i++){
+      totalCollectionAmount += double.parse(collectionReportList[i].totalAmt.toString());
+    }
+    setState(() {});
   }
 
   Future<void> getDashboardDetails() async {
@@ -59,8 +89,54 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     setState(() {});
   }
 
+  Future<void> getRevisitEntries() async {
+    revisitEntries = await ref.read(revisitListProvider).getAllRevisitEntriesList();
+    setState(() {});
+  }
+
+  List<Color> sectorColors = [
+    Color(0XFFA13752),
+    Color(0XFF3C001F),
+    Color(0XFF77209F),
+    Color(0XFF333E9F),
+  ];
+
+  Future<void> getDepartmentsOverview() async {
+    try {
+      departmentsOverviewList = await ref.read(dashboardProvider).getDepartmentsOverviewList();
+      departmentsData.clear();
+
+
+      double maxValue = 0.0;
+      for (var item in departmentsOverviewList) {
+        double visitValue = double.parse(item.visit.toString());
+        if (visitValue > maxValue) {
+          maxValue = visitValue;
+        }
+      }
+      for (int i = 0; i < departmentsOverviewList.length && i < 4; i++) {
+        double visitValue = double.parse(departmentsOverviewList[i].visit.toString());
+        if (visitValue < (maxValue * 0.1)) {
+          visitValue = 50.0;
+        }
+        Color color = sectorColors[i % sectorColors.length];
+        departmentsData.add(Sector(color: color, value: visitValue, name: departmentsOverviewList[i].name.toString()));
+      }
+    } catch (e) {
+      print('Error fetching departments overview: $e');
+    }
+    setState(() {});
+  }
+
+
   Future<void> getAvailableDoctorsList() async {
     doctorsAvailableList = await ref.read(doctorsProvider).getAvailableDoctors();
+    setState(() {});
+  }
+
+  Future<void> getAvailableDoctorsTimeSheetList(String doctorId) async {
+    doctorsAvailabilityTimeSheetList.clear();
+    doctorsAvailabilityTimeSheetList = await ref.read(doctorsProvider).getAvailableDoctorsTimeSheet(doctorId);
     setState(() {});
   }
 
@@ -98,22 +174,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     chartData = last7Days.map((date) {
       String dayOfWeek = DateFormat('EEE').format(date);
-      print("dayOfWeekdayOfWeekdayOfWeekdayOfWeekdayOfWeekdayOfWeekdayOfWeekdayOfWeek$dayOfWeek");
       return _ChartData(dayOfWeek, visitCounts[dayOfWeek]!);
     }).toList();
 
     highestRevisitValue = double.parse(visitCounts.values.reduce((a, b) => a > b ? a : b).toString());
+    if(highestRevisitValue == 0)highestRevisitValue = 10.0;
     chartData = chartData.reversed.toList();
 
     setState(() {});
   }
-
-  List<Sector> sectors = [
-    Sector(color: Color(0XFF3C001F), value: 60, name: "Dr. Ramchand S"),
-    Sector(color: Color(0XFFF5007F), value: 20, name: "Dr. Abhilash N"),
-    Sector(color: Color(0XFF333E9F), value: 30, name: "Dr. Manu Das M"),
-    Sector(color: Color(0XFF77209F), value: 50, name: "Dr. Varun Prabhakar"),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +207,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              (dashboardWidgetsList.isNotEmpty)?Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Flexible(
@@ -163,11 +232,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(dashboardWidgetsList.isNotEmpty ? dashboardWidgetsList[0].newIP.toString() : "", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
-                                Text("New IP", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
+                                Text(dashboardWidgetsList.isNotEmpty ? dashboardWidgetsList[0].admitted.toString() : "", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                                Text("Admitted", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14),),
                               ],
                             ),
-                            Image.asset("assets/images/notificationimage.png", height: 35, color: Colors.white,fit: BoxFit.contain,)
+                            Image.asset("assets/images/admittedicon.png", height: 25, color: Colors.white,fit: BoxFit.contain,)
                           ],
                         ),
                       ),
@@ -196,20 +265,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(dashboardWidgetsList.isNotEmpty ? dashboardWidgetsList[0].totalRevisit.toString() : "", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
-                                Text("Revist", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
+                                Text(revisitEntries.isNotEmpty ? revisitEntries.length.toString() : "", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                                Text("Revist", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14),),
                               ],
                             ),
-                            Image.asset("assets/images/revisitlogo.png", height: 40, color: Colors.white,)
+                            Image.asset("assets/images/revisitlogo.png", height: 30, color: Colors.white,)
                           ],
                         ),
                       ),
                     ),
                   ),
                 ],
-              ),
+              ):_dashboardWidgetsShimmer(),
               SizedBox(height: 20,),
-              Row(
+              (dashboardWidgetsList.isNotEmpty)?Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Flexible(
@@ -235,10 +304,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(dashboardWidgetsList.isNotEmpty ? dashboardWidgetsList[0].totalPatients.toString() : "", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
-                                Text("Registrations", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
+                                Text("Registrations", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14),),
                               ],
                             ),
-                            Image.asset("assets/images/registrationlogo.png", height: 35, color: Colors.white,)
+                            Image.asset("assets/images/registrationlogo.png", height: 25, color: Colors.white,)
                           ],
                         ),
                       ),
@@ -249,363 +318,372 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     flex: 5,
                     child: GestureDetector(
                       onTap: (){
-                        context.pushRoute(TotalAdmitListingRoute());
+                        context.pushRoute(CollectionReportRoute(fromDate: "01/01/1990", toDate: dateVariable.toString()));
                       },
                       child: Container(
+                        width: double.infinity,
                         padding: EdgeInsets.all(16.0),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [Color(0XFFD72628), Color(0XFF505296)],
                             begin: Alignment.bottomLeft,
-                            end: Alignment.topRight, // Define the gradient end
+                            end: Alignment.topRight,
                           ),
-                          borderRadius: BorderRadius.circular(12), // Optional border radius
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(dashboardWidgetsList.isNotEmpty ? dashboardWidgetsList[0].admitted.toString() : "", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
-                                Text("Total Admit", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),),
-                              ],
-                            ),
-                            Image.asset("assets/images/admittedicon.png", height: 40, color: Colors.white,)
+                            Text("₹ ${totalCollectionAmount.toString()}" , style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),),
+                            Text("Collections", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14),),
                           ],
                         ),
                       ),
                     ),
                   ),
                 ],
-              ),
+              ):_dashboardWidgetsShimmer(),
               SizedBox(height: 20,),
-              RichText(
-                text: TextSpan(
-                  style: GoogleFonts.poppins(
-                    fontSize: 18, // Default font size for the main text
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
-                    color: Colors.black, // Set a default text color
-                  ),
-                  children: <TextSpan>[
-                    const TextSpan(text: 'Revisit Graph (', style: TextStyle(fontWeight: FontWeight.w600)),
-                    TextSpan(
-                      text: '$revisitFirstDate - $revisitLastDate',
-                      style: TextStyle(fontSize: 14), // Decreased font size for the dates
-                    ),
-                    TextSpan(text: ')', style: TextStyle(fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
+              Text("Departments overview", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
               SizedBox(height: 10,),
-              Container(
-                child: SfCartesianChart(
-                    primaryXAxis: CategoryAxis(),
-                    primaryYAxis: NumericAxis(minimum: 0, maximum: highestRevisitValue + 1, interval: highestRevisitValue/2),
-                    tooltipBehavior: _tooltip,
-                    series: <CartesianSeries<_ChartData, String>>[
-                      ColumnSeries<_ChartData, String>(
-                          dataSource: chartData,
-                          xValueMapper: (_ChartData data, _) => data.x,
-                          yValueMapper: (_ChartData data, _) => data.y,
-                          name: 'patients',
-                          color: Color(0XFF1875D3),
-                          width: 0.5,
-                      )
-                    ])),
-              SizedBox(height: 20,),
+              PieChartWidget(departmentsData),
+              SizedBox(height: 10,),
               Text("Available Doctors", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
               SizedBox(height: 10,),
-              if(doctorsAvailableList.isNotEmpty)Container(
+              (doctorsAvailableList.isNotEmpty)?Container(
                 child: ListView.builder(
-                  itemCount: doctorsAvailableList.length,
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemBuilder: (BuildContext context, index){
-                    return Card(
-                      color: Colors.white,
-                      elevation: 0,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                    backgroundColor: Color(0XFF1875D3),
-                                    child: Text("A", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),)
-                                ),
-                                SizedBox(width: 10,),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(doctorsAvailableList[index].name.toString(), style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w400, fontSize: 15),),
-                                    Text(doctorsAvailableList[index].department.toString(), style: GoogleFonts.poppins(color: Colors.grey, fontWeight: FontWeight.w400, fontSize: 13),),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            GestureDetector(
-                              onTap : (){
-                                showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      contentPadding: EdgeInsets.zero,
-                                      title: Text('Shift Details'),
-                                      content: Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Container(
-                                          height: MediaQuery.of(context).size.height * 0.37,
-                                          width: MediaQuery.of(context).size.width * 0.8,
-                                          child: Column(
-                                            children: [
-                                              Text('Dr. Ramchand S'),
-                                              Table(
-                                                border: TableBorder.all(),
+                    itemCount: doctorsAvailableList.length,
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemBuilder: (BuildContext context, index){
+                      return Card(
+                        color: Colors.white,
+                        elevation: 0,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                      backgroundColor: Color(0XFF1875D3),
+                                      child: Text("A", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),)
+                                  ),
+                                  SizedBox(width: 10,),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(doctorsAvailableList[index].name.toString(), style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w400, fontSize: 15),),
+                                      Text(doctorsAvailableList[index].department.toString(), style: GoogleFonts.poppins(color: Colors.grey, fontWeight: FontWeight.w400, fontSize: 13),),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              GestureDetector(
+                                onTap : ()async{
+                                  await getAvailableDoctorsTimeSheetList(doctorsAvailableList[index].doctorsId.toString());
+                                  setState(() {});
+                                  selectedDoctorName = doctorsAvailableList[index].name.toString();
+                                  if(doctorsAvailabilityTimeSheetList.isNotEmpty) {
+                                    showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        contentPadding: EdgeInsets.zero,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        content: Wrap(
+                                          children: [
+                                            Container(
+                                              width: MediaQuery.of(context).size.width * 0.8,
+                                              decoration: BoxDecoration(
+                                                color: Color(0XFF4E3167),
+                                                borderRadius: BorderRadius.circular(16),
+                                              ),
+                                              child: Column(
                                                 children: [
-                                                  TableRow(
-                                                    decoration: BoxDecoration(color: Colors.grey[300]),
+                                                  Padding(
+                                                    padding: const EdgeInsets.all(8.0),
+                                                    child: Text(selectedDoctorName,style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),),
+                                                  ),
+                                                  Table(
+                                                    border: TableBorder.all(),
                                                     children: [
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Days", style: TextStyle(fontWeight: FontWeight.bold)),
+                                                      TableRow(
+                                                        decoration: BoxDecoration(color: Colors.grey[300]),
+                                                        children: [
+                                                          Padding(
+                                                            padding: const EdgeInsets.all(8.0),
+                                                            child: Text("Days", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                                                          ),
+                                                          Padding(
+                                                            padding: const EdgeInsets.all(8.0),
+                                                            child: Text("Shift", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                                                          ),
+                                                          Padding(
+                                                            padding: const EdgeInsets.all(8.0),
+                                                            child: Text("Start Time", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                                                          ),
+                                                          Padding(
+                                                            padding: const EdgeInsets.all(8.0),
+                                                            child: Text("End Time", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                                                          ),
+                                                        ],
                                                       ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Shift", style: TextStyle(fontWeight: FontWeight.bold)),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Start Time", style: TextStyle(fontWeight: FontWeight.bold)),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("End Time", style: TextStyle(fontWeight: FontWeight.bold)),
-                                                      ),
+                                                      for (int i = 0; i < doctorsAvailabilityTimeSheetList.length; i++)
+                                                        TableRow(
+                                                          children: [
+                                                            Padding(
+                                                              padding: const EdgeInsets.all(8.0),
+                                                              child: Text(doctorsAvailabilityTimeSheetList[i].days.toString().substring(0, 3),style: GoogleFonts.poppins(fontWeight: FontWeight.w400, color: Colors.white70)),
+                                                            ),
+                                                            Padding(
+                                                              padding: const EdgeInsets.all(8.0),
+                                                              child: Text(doctorsAvailabilityTimeSheetList[i].shift.toString(),style: GoogleFonts.poppins(fontWeight: FontWeight.w400, color: Colors.white70)),
+                                                            ),
+                                                            Padding(
+                                                              padding: const EdgeInsets.all(8.0),
+                                                              child: Text(doctorsAvailabilityTimeSheetList[i].startTime.toString(),style: GoogleFonts.poppins(fontWeight: FontWeight.w400, color: Colors.white70)),
+                                                            ),
+                                                            Padding(
+                                                              padding: const EdgeInsets.all(8.0),
+                                                              child: Text(doctorsAvailabilityTimeSheetList[i].endTime.toString(),style: GoogleFonts.poppins(fontWeight: FontWeight.w400, color: Colors.white70)),
+                                                            ),
+                                                          ],
+                                                        ),
                                                     ],
                                                   ),
-                                                  TableRow(
-                                                    children: [
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Sunday"),
+                                                  Gap(10),
+                                                  GestureDetector(
+                                                    onTap: (){
+                                                      Navigator.pop(context);
+                                                    },
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(8.0),
+                                                      child: Container(
+                                                        width: MediaQuery.of(context).size.width * 0.4,
+                                                        height: MediaQuery.of(context).size.height * 0.04,
+                                                        decoration: BoxDecoration(
+                                                          color: Color(0XFF040205),
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                        child: Center(child: Text("OK", style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),)),
                                                       ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Evening"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("5:00 PM"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("11:00 PM"),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  TableRow(
-                                                    children: [
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Monday"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Morning"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("9:00 AM"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("5:00 PM"),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  TableRow(
-                                                    children: [
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Tuesday"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Afternoon"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("1:00 PM"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("9:00 PM"),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  TableRow(
-                                                    children: [
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Wed"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Evening"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("5:00 PM"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("11:00 PM"),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  TableRow(
-                                                    children: [
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Thursay"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Evening"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("5:00 PM"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("11:00 PM"),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  TableRow(
-                                                    children: [
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Friday"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Evening"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("5:00 PM"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("11:00 PM"),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  TableRow(
-                                                    children: [
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Saturday"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("Evening"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("5:00 PM"),
-                                                      ),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Text("11:00 PM"),
-                                                      ),
-                                                    ],
-                                                  ),
+                                                    ),
+                                                  )
                                                 ],
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                          ]
                                         ),
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          child: Text('OK'),
-                                          onPressed: () {
-                                            // Perform some action
-                                            Navigator.of(context).pop();
-                                          },
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                              child: Container(
-                                height: MediaQuery.of(context).size.height * 0.04,
-                                width: MediaQuery.of(context).size.width * 0.22,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(15),
-                                  border: Border.all(
-                                    color: Color(0XFF1875D3),
-                                    width: 1,
+                                      );
+                                    },
+                                  );
+                                  }
+                                },
+                                child: Container(
+                                  height: MediaQuery.of(context).size.height * 0.04,
+                                  width: MediaQuery.of(context).size.width * 0.26,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(15),
+                                    border: Border.all(
+                                      color: Color(0XFF1875D3),
+                                      width: 1,
+                                    ),
                                   ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    "Available",
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.black,
-                                      fontSize: 13
+                                  child: Center(
+                                    child: Text(
+                                      (doctorsAvailableList[index].currentDate.toString() == "1")?"Available" : "Not Available",
+                                      style: GoogleFonts.poppins(
+                                          color: (doctorsAvailableList[index].currentDate.toString() == "1") ? Colors.black : Color(0XFFFF7382),
+                                          fontSize: 13
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            )
+                              )
 
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  }
+                      );
+                    }
                 ),
-              ),
-              SizedBox(height: 20,),
-              Text("Pharmacy Collections", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
-              SizedBox(height: 10,),
-              Container(
-                child: SfCartesianChart(
-                  primaryXAxis: CategoryAxis(),
-                  primaryYAxis: NumericAxis(minimum: 0, maximum: 100, interval: 20),
-                  tooltipBehavior: _tooltip,
-                  series: <CartesianSeries<_ChartData, String>>[
-                    LineSeries<_ChartData, String>(
-                      dataSource: chartData,
-                      xValueMapper: (_ChartData data, _) => data.x,
-                      yValueMapper: (_ChartData data, _) => data.y,
-                      name: 'patients',
-                      color: Color(0XFF1875D3),
-                      width: 2.0, // You can adjust the width to change the line thickness
-                    )
-                  ],
-                ),
-              ),
-              SizedBox(height: 20,),
-              Text("Doctors overview", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
-              SizedBox(height: 10,),
-              PieChartWidget(sectors),
+              ):_doctorsAvailableShimmer(),
+              // SizedBox(height: 20,),
+              // RichText(
+              //   text: TextSpan(
+              //     style: GoogleFonts.poppins(
+              //       fontSize: 18, // Default font size for the main text
+              //       fontWeight: FontWeight.w600,
+              //       letterSpacing: 0.3,
+              //       color: Colors.black, // Set a default text color
+              //     ),
+              //     children: <TextSpan>[
+              //       const TextSpan(text: 'Revisit Graph (', style: TextStyle(fontWeight: FontWeight.w600)),
+              //       TextSpan(
+              //         text: '$revisitFirstDate - $revisitLastDate',
+              //         style: TextStyle(fontSize: 14), // Decreased font size for the dates
+              //       ),
+              //       TextSpan(text: ')', style: TextStyle(fontWeight: FontWeight.w600)),
+              //     ],
+              //   ),
+              // ),
+              // Container(
+              //   child: SfCartesianChart(
+              //       primaryXAxis: CategoryAxis(),
+              //       primaryYAxis: NumericAxis(minimum: 0, maximum: highestRevisitValue + 1, interval: highestRevisitValue/2),
+              //       tooltipBehavior: _tooltip,
+              //       series: <CartesianSeries<_ChartData, String>>[
+              //         ColumnSeries<_ChartData, String>(
+              //             dataSource: chartData,
+              //             xValueMapper: (_ChartData data, _) => data.x,
+              //             yValueMapper: (_ChartData data, _) => data.y,
+              //             name: 'patients',
+              //             color: Color(0XFF1875D3),
+              //             width: 0.5,
+              //         )
+              //       ])),
+              // SizedBox(height: 20,),
+              // Text("Pharmacy Collections", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+              // SizedBox(height: 10,),
+              // Container(
+              //   child: SfCartesianChart(
+              //     primaryXAxis: CategoryAxis(),
+              //     primaryYAxis: NumericAxis(minimum: 0, maximum: 100, interval: 20),
+              //     tooltipBehavior: _tooltip,
+              //     series: <CartesianSeries<_ChartData, String>>[
+              //       LineSeries<_ChartData, String>(
+              //         dataSource: chartData,
+              //         xValueMapper: (_ChartData data, _) => data.x,
+              //         yValueMapper: (_ChartData data, _) => data.y,
+              //         name: 'patients',
+              //         color: Color(0XFF1875D3),
+              //         width: 2.0, // You can adjust the width to change the line thickness
+              //       )
+              //     ],
+              //   ),
+              // ),
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _dashboardWidgetsShimmer() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            flex: 5,
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey[350]!,
+              highlightColor: Colors.grey[200]!,
+              child: Container(
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 15,),
+          Flexible(
+            flex: 5,
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey[350]!,
+              highlightColor: Colors.grey[200]!,
+              child: Container(
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _doctorsAvailableShimmer() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListView.builder(
+        itemCount: 4,
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        itemBuilder: (BuildContext context,index){
+          return Container(
+            margin: EdgeInsets.only(bottom: 10),
+            height: 60,
+            child: Row(
+              children: [
+                Flexible(
+                  flex: 2,
+                  child: Shimmer.fromColors(
+                    baseColor: Colors.grey[350]!,
+                    highlightColor: Colors.grey[200]!,
+                    child: CircleAvatar(
+                      radius: 28,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 15,),
+                Flexible(
+                  flex: 8,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Shimmer.fromColors(
+                        baseColor: Colors.grey[350]!,
+                        highlightColor: Colors.grey[200]!,
+                        child: Container(
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Shimmer.fromColors(
+                        baseColor: Colors.grey[350]!,
+                        highlightColor: Colors.grey[200]!,
+                        child: Container(
+                          height: 8,
+                          width: MediaQuery.of(context).size.width * 0.5,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                ),
+              ],
+            ),
+          );
+        }
+      ),
+    );
+  }
+
 }
 
 class _ChartData {

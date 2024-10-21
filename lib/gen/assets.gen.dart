@@ -16,9 +16,17 @@ class $AssetsImagesGen {
   AssetGenImage get admittedicon =>
       const AssetGenImage('assets/images/admittedicon.png');
 
+  /// File path: assets/images/doctorlogo.png
+  AssetGenImage get doctorlogo =>
+      const AssetGenImage('assets/images/doctorlogo.png');
+
   /// File path: assets/images/medochmslogo.png
   AssetGenImage get medochmslogo =>
       const AssetGenImage('assets/images/medochmslogo.png');
+
+  /// File path: assets/images/medocsplashlogo.png
+  AssetGenImage get medocsplashlogo =>
+      const AssetGenImage('assets/images/medocsplashlogo.png');
 
   /// File path: assets/images/notificationicon.png
   AssetGenImage get notificationicon =>
@@ -39,7 +47,9 @@ class $AssetsImagesGen {
   /// List of all assets
   List<AssetGenImage> get values => [
         admittedicon,
+        doctorlogo,
         medochmslogo,
+        medocsplashlogo,
         notificationicon,
         notificationimage,
         registrationlogo,

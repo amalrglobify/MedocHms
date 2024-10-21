@@ -1,29 +1,50 @@
 import 'dart:async';
-
+import 'dart:io';
+import 'package:html/parser.dart';
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:excel/excel.dart';
+import 'package:flutter_native_html_to_pdf/flutter_native_html_to_pdf.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:medochms/models/reports/lab_bill_report_model.dart';
 import 'package:medochms/routes/app_router.gr.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'dart:convert';
 
+import '../../Provider/reports/reports_provider.dart';
+
 @RoutePage()
-class LabBillReportScreen extends StatefulWidget {
-  const LabBillReportScreen({super.key});
+class LabBillReportScreen extends ConsumerStatefulWidget {
+  final String fromDate;
+  final String toDate;
+  const LabBillReportScreen({super.key, required this.fromDate, required this.toDate});
 
   @override
-  State<LabBillReportScreen> createState() => _LabBillReportScreenState();
+  ConsumerState<LabBillReportScreen> createState() => _LabBillReportScreenState(this.fromDate, this.toDate);
 }
 
-class _LabBillReportScreenState extends State<LabBillReportScreen> {
+class _LabBillReportScreenState extends ConsumerState<LabBillReportScreen> {
+  String? generatedPdfFilePath;
+  final _flutterNativeHtmlToPdfPlugin = FlutterNativeHtmlToPdf();
   final Completer<WebViewController> _controller =
   Completer<WebViewController>();
   WebViewController _con = WebViewController();
   String _html = "";
+  String fromDate;
+  String toDate;
+  double totalAmount = 0.0;
+  double totalDiscount = 0.0;
+  double totalFinalAmount = 0.0;
 
+
+  _LabBillReportScreenState(this.fromDate, this.toDate);
 
   setHTML(String email, String phone, String name) {
     _html = '''
@@ -156,67 +177,34 @@ class _LabBillReportScreenState extends State<LabBillReportScreen> {
                     <th>Time</th>
                     <th>Patient</th>
                     <th>Doctor</th>
-                    <th>Cash</th>
-                    <th>Upi</th>
-                    <th>Card</th>
+                    <th>Amount</th>
+                    <th>Discount</th>
+                    <th>Total\nAmount</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td>1</td>
-                    <td>4578</td>
-                    <td>100</td>
-                    <td>500</td>
-                    <td>2024/09/15</td>
+            <tbody>''';
+    for(int i=0; i<labBillReportList.length; i++){
+      _html += '''
+      <tr>
+                    <td>$i</td>
+                    <td>${labBillReportList[i].billNo.toString()}</td>
+                    <td>${labBillReportList[i].regNo.toString()}</td>
+                    <td>${labBillReportList[i].ipNo.toString()}</td>
+                    <td>${labBillReportList[i].billDate.toString()}</td>
                     <td>12:00 PM</td>
-                    <td>Amal</td>
-                    <td>Doctor</td>
-                    <td>100</td>
-                    <td>0.0</td>
-                    <td>0.0</td>
+                    <td>${labBillReportList[i].name.toString()}</td>
+                    <td>${labBillReportList[i].hospital.toString()}</td>
+                    <td>${labBillReportList[i].netAmt.toString()}</td>
+                    <td>${labBillReportList[i].discAmt.toString()}</td>
+                    <td>${labBillReportList[i].totalAmt.toString()}</td>
                 </tr>
-                <tr>
-                    <td>2</td>
-                    <td>1457</td>
-                    <td>150</td>
-                    <td>150</td>
-                    <td>2024/09/15</td>
-                    <td>12:00 PM</td>
-                    <td>Amal</td>
-                    <td>Doctor</td>
-                    <td>100</td>
-                    <td>0.0</td>
-                    <td>0.0</td>
-                </tr>
-                <tr>
-                    <td>3</td>
-                    <td>3458</td>
-                    <td>50</td>
-                    <td>150</td>
-                    <td>2024/09/15</td>
-                    <td>12:00 PM</td>
-                    <td>Amal</td>
-                    <td>Doctor</td>
-                    <td>100</td>
-                    <td>0.0</td>
-                    <td>0.0</td>
-                </tr>
-                <tr>
-                    <td>4</td>
-                    <td>1278</td>
-                    <td>80</td>
-                    <td>80</td>
-                    <td>2024/09/15</td>
-                    <td>12:00 PM</td>
-                    <td>Amal</td>
-                    <td>Doctor</td>
-                    <td>100</td>
-                    <td>0.0</td>
-                    <td>0.0</td>
-                </tr>
-                <tr class="total">
-                    <td colspan="4">Total Amount</td>
-                    <td>880</td>
+                 ''';
+    }
+             _html += '''   <tr class="total">
+                    <td colspan="8">Total Amount</td>
+                    <td>$totalAmount</td>
+                    <td>$totalDiscount</td>
+                    <td>$totalFinalAmount</td>
                 </tr>
             </tbody>
         </table>
@@ -237,6 +225,97 @@ class _LabBillReportScreenState extends State<LabBillReportScreen> {
   }
 
 
+  Future<void> _requestPermissions() async {
+    var status = await Permission.storage.request();
+
+    if (status.isGranted) {
+      _savePdf();
+    } else if (status.isDenied) {
+      // Permission denied, inform the user
+      print('Storage permission denied');
+      _showPermissionDeniedDialog();
+    } else if (status.isPermanentlyDenied) {
+      // Open app settings to manually grant permission
+      await openAppSettings();
+    }
+  }
+
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Permission Denied'),
+          content: Text('Please allow storage permissions to save the PDF.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                openAppSettings();  // Opens app settings to change permissions
+              },
+              child: Text('Open Settings'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _savePdf() async {
+    // Replace this with the actual PDF generation logic
+    Directory appDocDir = await getApplicationDocumentsDirectory();
+    String targetPath = '/storage/emulated/0/Download'; // Downloads directory
+    String targetFileName = 'Lab bill report.pdf';
+    String filePath = '$targetPath/$targetFileName';
+
+    // Simulate saving a PDF file (replace this with your PDF saving logic)
+    File pdfFile = File(filePath);
+    await pdfFile.writeAsString('This is a sample PDF content');
+
+    setState(() {
+      generatedPdfFilePath = filePath;
+    });
+
+    print('PDF saved to: $filePath');
+  }
+
+  Future<void> _generateExcel(String htmlContent) async {
+    try {
+      var document = parse(htmlContent);
+      var rows = document.getElementsByTagName('tr');
+
+      var excel = Excel.createExcel();
+      Sheet sheet = excel['Sheet1'];
+
+      for (var row in rows) {
+        var cells = row.getElementsByTagName('th').isNotEmpty
+            ? row.getElementsByTagName('th')
+            : row.getElementsByTagName('td');
+
+        List<dynamic> rowData = [];
+        for (var cell in cells) {
+          rowData.add(cell.innerHtml);
+        }
+        sheet.appendRow(rowData);
+      }
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/LabReport.xlsx';
+      final file = File(filePath);
+
+      await file.writeAsBytes(await excel.encode()!);
+
+      await Share.shareXFiles(
+        [XFile(filePath)],
+        text: 'Check out this Excel file!',
+      );
+    } catch (e) {
+      print('Error generating Excel file: $e');
+    }
+  }
+
   _loadHTML() async {
     setHTML(
         "connelblaze@gmil.com",
@@ -248,6 +327,17 @@ class _LabBillReportScreenState extends State<LabBillReportScreen> {
         mimeType: 'text/html',
         encoding: Encoding.getByName('utf-8')
     ));
+    Directory appDocDir = await getApplicationDocumentsDirectory();
+    final targetPath = appDocDir.path;
+    const targetFileName = "Lab bill report";
+    final generatedPdfFile =
+    await _flutterNativeHtmlToPdfPlugin.convertHtmlToPdf(
+      html: _html,
+      targetDirectory: targetPath,
+      targetName: targetFileName,
+    );
+
+    generatedPdfFilePath = generatedPdfFile?.path;
   }
 
   var _fromDate = TextEditingController();
@@ -255,12 +345,21 @@ class _LabBillReportScreenState extends State<LabBillReportScreen> {
 
   void _setDefaultDates() {
     DateTime currentDate = DateTime.now();
-    DateTime fromDate = currentDate.subtract(Duration(days: 30));
+    DateTime fromDateNew = currentDate.subtract(Duration(days: 30));
 
     DateFormat dateFormat = DateFormat('dd/MM/yyyy');
 
-    _fromDate.text = dateFormat.format(fromDate);
-    _toDate.text = dateFormat.format(currentDate);
+    if(fromDate.isEmpty){
+      _fromDate.text = dateFormat.format(fromDateNew);
+    }else{
+      _fromDate.text = fromDate;
+    }
+
+    if(toDate.isEmpty){
+      _toDate.text = dateFormat.format(fromDateNew);
+    }else{
+      _toDate.text = toDate;
+    }
   }
 
   void _selectDate(BuildContext context, TextEditingController controller) async {
@@ -281,7 +380,7 @@ class _LabBillReportScreenState extends State<LabBillReportScreen> {
                 color: Colors.blue,
               ),
             ),
-            inputDecorationTheme: InputDecorationTheme(
+            inputDecorationTheme: const InputDecorationTheme(
               border: OutlineInputBorder(),
             ),
           ),
@@ -298,184 +397,216 @@ class _LabBillReportScreenState extends State<LabBillReportScreen> {
     }
   }
 
+  List<LabBillReportModel> labBillReportList = [];
+
+  Future<bool> _onWillPop() async {
+    await context.pushRoute(const DashboardRoute());
+    return false;
+  }
+
 
   @override
   void initState() {
     super.initState();
     _setDefaultDates();
-    _loadHTML();
+    getLabBillReportDetails();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        forceMaterialTransparency: true,
-        iconTheme: IconThemeData(color: Colors.black),
-        toolbarHeight: 120,
-        title: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            "Lab Bill Report",
-            style: GoogleFonts.poppins(
-              color: Colors.black,
-              fontWeight: FontWeight.w500,
-              fontSize: 20,
-            ),
-          ),
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (String value) {
-              // Handle the selected action
-              switch (value) {
-                case 'share':
-                // Handle share action
-                  print('Share clicked');
-                  break;
-                case 'download':
-                // Handle download action
-                  print('Download clicked');
-                  break;
-                case 'print':
-                // Handle print action
-                  print('Print clicked');
-                  break;
-              }
-            },
-            itemBuilder: (BuildContext context) {
-              return [
-                PopupMenuItem<String>(
-                  value: 'share',
-                  child: ListTile(
-                    leading: Icon(Icons.share),
-                    title: Text('Share'),
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  onTap: () async {
-
-                  },
-                  value: 'download',
-                  child: ListTile(
-                    leading: Icon(Icons.download),
-                    title: Text('Download'),
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  value: 'print',
-                  child: ListTile(
-                    leading: Icon(Icons.print),
-                    title: Text('Print'),
-                  ),
-                ),
-              ];
-            },
-            child: Padding(
-              padding: const EdgeInsets.only(right: 15.0),
-              child: Icon(
-                Icons.share, // Use an appropriate icon here
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          forceMaterialTransparency: true,
+          iconTheme: IconThemeData(color: Colors.black),
+          toolbarHeight: 120,
+          leading: GestureDetector(
+              onTap: (){
+                context.pushRoute(const DashboardRoute());
+              },
+              child: Icon(Iconsax.arrow_left_2)),
+          title: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Lab Bill Report",
+              style: GoogleFonts.poppins(
                 color: Colors.black,
-                size: 25,
+                fontWeight: FontWeight.w500,
+                fontSize: 20,
               ),
             ),
           ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(10), // Adjust height as needed
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Text("From Date", style: GoogleFonts.poppins(color: Colors.grey),),
-                      ),
-                      TextFormField(
-                        controller: _fromDate,
-                        readOnly: true,
-                        onTap: () => _selectDate(context, _fromDate),
-                        decoration: InputDecoration(
-                          hintText: 'From Date',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ],
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (String value) async{
+                // Handle the selected action
+                switch (value) {
+                  case 'share':
+                    await Share.shareXFiles(
+                      [XFile(generatedPdfFilePath!)],
+                      text: 'This is pdf file',
+                    );
+                    break;
+                  case 'share as Excel':
+                    await _generateExcel(_html);
+                    break;
+                  case 'download':
+                    // await _requestPermissions();
+                    break;
+                }
+              },
+              itemBuilder: (BuildContext context) {
+                return const[
+                  PopupMenuItem<String>(
+                    value: 'share',
+                    child: ListTile(
+                      leading: Icon(Icons.share),
+                      title: Text('Share'),
+                    ),
                   ),
-                ),
-                SizedBox(width: 8.0),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Text("To Date", style: GoogleFonts.poppins(color: Colors.grey),),
-                      ),
-                      TextFormField(
-                        controller: _toDate,
-                        readOnly: true,
-                        onTap: () => _selectDate(context, _toDate),
-                        decoration: InputDecoration(
-                          hintText: 'To Date',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ],
+                  PopupMenuItem<String>(
+                    value: 'share as Excel',
+                    child: ListTile(
+                      leading: Icon(Icons.share),
+                      title: Text('share as Excel'),
+                    ),
                   ),
+                  // PopupMenuItem<String>(
+                  //   value: 'download',
+                  //   child: ListTile(
+                  //     leading: Icon(Icons.download),
+                  //     title: Text('download'),
+                  //   ),
+                  // ),
+                ];
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(right: 15.0),
+                child: Icon(
+                  Icons.share,
+                  color: Colors.black,
+                  size: 25,
                 ),
-                SizedBox(width: 8.0),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Text("", style: GoogleFonts.poppins(color: Colors.grey),),
-                      ),
-                      GestureDetector(
-                        onTap: (){
-                          context.pushRoute(LabBillReportRoute());
-                        },
-                        child: Container(
-                          height: MediaQuery.of(context).size.height * 0.05,
-                          width: double.maxFinite,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0XFF333E9F), Color(0XFF77209F)],
-                              begin: Alignment.bottomLeft,
-                              end: Alignment.topRight, // Define the gradient end
+              ),
+            ),
+          ],
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight(10),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Text("From Date", style: GoogleFonts.poppins(color: Colors.grey),),
+                        ),
+                        TextFormField(
+                          controller: _fromDate,
+                          readOnly: true,
+                          onTap: () => _selectDate(context, _fromDate),
+                          decoration: InputDecoration(
+                            hintText: 'From Date',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 8.0),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Text("To Date", style: GoogleFonts.poppins(color: Colors.grey),),
+                        ),
+                        TextFormField(
+                          controller: _toDate,
+                          readOnly: true,
+                          onTap: () => _selectDate(context, _toDate),
+                          decoration: InputDecoration(
+                            hintText: 'To Date',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 8.0),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Text("", style: GoogleFonts.poppins(color: Colors.grey),),
+                        ),
+                        GestureDetector(
+                          onTap: (){
+                            context.pushRoute(LabBillReportRoute(fromDate: _fromDate.text, toDate: _toDate.text));
+                          },
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.05,
+                            width: double.maxFinite,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0XFF333E9F), Color(0XFF77209F)],
+                                begin: Alignment.bottomLeft,
+                                end: Alignment.topRight, // Define the gradient end
+                              ),
+                              borderRadius: BorderRadius.circular(10), // Optional border radius
                             ),
-                            borderRadius: BorderRadius.circular(10), // Optional border radius
+                            // color: Color(0XFF1875D3),
+                            child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Iconsax.search_normal, color: Colors.white,),
+                                    SizedBox(width: 8),
+                                    Text("Search", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500),),
+                                  ],
+                                )
+                            ),
                           ),
-                          // color: Color(0XFF1875D3),
-                          child: Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Iconsax.search_normal, color: Colors.white,),
-                                  SizedBox(width: 8),
-                                  Text("Search", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500),),
-                                ],
-                              )
-                          ),
-                        ),
-                      )
-                    ],
-                  )
-                ),
-              ],
+                        )
+                      ],
+                    )
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      body: WebViewWidget(
-        controller: _con,
+        body: WebViewWidget(
+          controller: _con,
+        ),
       ),
     );
   }
+
+  Future<void> getLabBillReportDetails() async {
+    labBillReportList.clear();
+    labBillReportList = await ref.read(reportsProvider).getAllLabBillReportDetails(_fromDate.text, _toDate.text);
+    getTotalValues();
+    _loadHTML();
+    setState(() {});
+  }
+
+  void getTotalValues() {
+    totalAmount = 0.0;
+    totalDiscount = 0.0;
+    totalFinalAmount = 0.0;
+    for(int i=0; i<labBillReportList.length; i++) {
+      totalAmount += labBillReportList[i].netAmt ?? 0.0;
+      totalDiscount += labBillReportList[i].discAmt ?? 0.0;
+      totalFinalAmount += labBillReportList[i].totalAmt ?? 0.0;
+    }
+  }
+
 }
